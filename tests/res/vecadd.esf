@@ -1,0 +1,7 @@
+
+[cuda: a, b, N -> c]
+    // data type is defined at runtime
+    // and signature is constructed and compile at runtime
+
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    if(id < N) c.data[id] = a.data[id] + b.data[id];
