@@ -2,6 +2,9 @@
 
 class _Launcher(object):
 
+    def __call__(self, *vargs, **kwargs):
+        pass
+
     def __getitem__(self, indices):
 
         if isinstance(indices, int):
@@ -21,7 +24,7 @@ class Launcher(object):
 
         self.esf = esf
         self.engine = engine
-        self.launch = _Launcher()
+        self.run = _Launcher()
 
     def finish(self):
         pass

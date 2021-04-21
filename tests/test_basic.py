@@ -11,7 +11,7 @@ def test_cuda():
 
     a = np.ones(N)
     b = np.ones(N)
-    c = np.array(N)
+    c = np.zeros(N)
 
     esf = os.path.join(here, "res", "vecadd.esf")
 
@@ -20,8 +20,9 @@ def test_cuda():
         erd.memcpy2device(a)
         erd.memcpy2device(b)
 
-        erd.launch[N](a, b, N)
+        #erd.run[N](a, b, N)
+        erd.run(a, b, N)
 
         erd.memcpy2host(c)
 
-    assert np.sum(c) == 20.0
+    assert c.sum() == a.sum() + b.sum()
