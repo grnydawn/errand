@@ -4,7 +4,7 @@ import os
 
 from errand.esf import SourceFile
 from errand.engine import Engine, CUDAEngine
-from errand.launcher import Launcher
+from errand.context import Context
 
 
 class Errand(object):
@@ -20,10 +20,9 @@ class Errand(object):
     _author_ = "Youngsung Kim"
     _author_email_ = "youngsung.kim.act2@gmail.com"
 
-    def __init__(self, path, engine=None):
+    def __init__(self, path, engine=None, compiler=None):
 
         # load esf file
-
         if os.path.isfile(path):
             self.esf = SourceFile(path)
 
@@ -43,6 +42,8 @@ class Errand(object):
         else:
             raise Exception("Wrong engine type: %s" % str(engine))
 
+        self.engine.compiler = compiler
+
     def _get_engine(self, name):
 
         if name == "cuda":
@@ -53,11 +54,11 @@ class Errand(object):
             
     def __enter__(self):
 
-        self.launcher = Launcher(self.esf, self.engine)
+        self.ctx = Context(self.esf, self.engine)
 
-        return self.launcher
+        return self.ctx
 
     def __exit__(self, exc_type, exc_val, exc_tb):
 
-        self.launcher.finish()
+        self.ctx.finish()
 

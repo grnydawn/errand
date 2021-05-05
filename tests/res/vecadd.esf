@@ -1,7 +1,22 @@
 
-[cuda: a, b, N -> c]
-    // data type is defined at runtime
+[signature: a, b, N -> c @ key="test"]
+
+    // may define specific types of arguments
+    // may define global variables
+    // data type is defined at runtime if not specified
     // and signature is constructed and compile at runtime
+    // follow numpy conventions
+    // support debugging with input / output verification like stubs
+
+[cuda: -O3 @ compiler="nvcc"]
 
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if(id < N) c.data[id] = a.data[id] + b.data[id];
+
+[hip]
+
+    // int id = hipThreadIdx_x;
+    // if(id < N) c.data[id] = a.data[id] + b.data[id];
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    if(id < N) c.data[id] = a.data[id] + b.data[id];
+

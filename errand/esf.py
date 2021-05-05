@@ -8,6 +8,12 @@ class SourceFile(object):
 
         self.header, self.sections = self._parse(path)
 
+    def get_signature(self):
+        pass
+
+    def get_section(self, secname):
+        pass
+
     def _parse(self, path):
 
         # TODO: use cache
@@ -20,10 +26,12 @@ class SourceFile(object):
 
         with open(path) as fd:
             for line in fd:
+                line = line.rstrip()
+
                 if line and line[0] == "[":
                     if stage == 0:
                         if buf:
-                            header = self._parse_header(buf)
+                            header = buf
 
                         stage = 1
 
@@ -37,16 +45,13 @@ class SourceFile(object):
 
             if buf:
                 if stage == 0:
-                    header = self._parse_header(buf)
+                    header = buf
 
                 elif stage == 1:
                     sections.append(self._parse_section(buf))
                     
         return header, sections
 
-    def _parse_header(self, lines):
-
-        pass
-
     def _parse_section(self, lines):
-        import pdb; pdb.set_trace()
+
+        return lines

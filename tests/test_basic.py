@@ -20,8 +20,8 @@ def test_cuda():
         erd.memcpy2device(a)
         erd.memcpy2device(b)
 
-        #erd.run[N](a, b, N)
-        erd.run(a, b, N)
+        #erd.run[N](a, b)
+        erd.run(a, b)
 
         erd.memcpy2host(c)
 
