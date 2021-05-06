@@ -1,8 +1,11 @@
 """Errand engine module"""
 
-import os, sys, abc
+import os, sys, abc, string
+import subprocess as subp
 
 Object = abc.ABCMeta("Object", (object,), {})
+
+LEN_FILENAME = 16
 
 def _which(pgm):
     path=os.getenv('PATH')
@@ -14,11 +17,12 @@ def _which(pgm):
 
 class Engine(Object):
 
-    def __init__(self):
+    def __init__(self, compiler, workdir):
 
-        self.compiler = None
+        self.compiler = compiler
+        self.workdir = workdir
 
-    def kernel_launch(self, esf, config, *vargs):
+    def kernel_launch(self, esf, config, workdir, *vargs):
 
         # generate cuda source code
         code = self.gencode(esf, *vargs)
@@ -64,7 +68,19 @@ class CUDAEngine(Engine):
         sig = esf.get_signature()
         body = esf.get_section("cuda")
 
-        code["code"] = (sig, body)
+        import pdb; pdb.set_trace()
+
+        # gen code name
+        path = os.path.join(self.workdir, "code.cu")
+
+        # write code
+        with open(path, "w") as f:
+            f.write(sig + "\n")
+            f.write("{" + "\n")
+            f.write(body + "\n")
+            f.write("}")
+
+        code["path"] = path
 
         return code
 
@@ -84,24 +100,39 @@ class CUDAEngine(Engine):
             nvcc = code["compiler"]
 
         elif "ERRAND_COMPILER" in os.environ:
-            os.environ["ERRAND_COMPILER"]
+            nvcc = os.environ["ERRAND_COMPILER"]
             
         else:
-            _nvcc = _which("nvcc")
-            if _nvcc:
-                nvcc = _nvcc
+            nvcc = _which("nvcc")
 
-            else:
-                _nvcc = self.findcompiler()
-                if _nvcc:
-                    nvcc = _nvcc
+            if nvcc is None:
+                nvcc = self.findcompiler()
 
         if nvcc is None:
             raise Exception("Can not find CUDA compiler.")
 
         # collect compiler options
 
-        # generate shared library
+        opts = ""
 
-        return ""
+        if "compiler_options" in code:
+            opts = code["compiler_options"]
+
+        elif "ERRAND_COMPILER_OPTION" in os.environ:
+            opts = os.environ["ERRAND_COMPILER_OPTIONS"]
+
+        # generate shared library
+        cmdopts = {"nvcc": nvcc, "opts": opts, "path": code["path"],
+                    "defaults": "--compiler-options '-fPIC' -o mylib.so --shared"
+                }
+
+        try:
+            cmd = "{nvcc} {opts} {defaults} {path}".format(cmdopts)
+            stdout = subp.check_output(cmd, shell=True, stderr=subp.STDOUT)
+
+        except Exception as err:
+            print(err.stdout)
+            sys.exit(err.returncode)
+
+        return nvcc
 
