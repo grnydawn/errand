@@ -17,12 +17,7 @@ def test_cuda():
 
     with Errand(esf, engine="cuda") as erd:
 
-        erd.memcpy2device(a)
-        erd.memcpy2device(b)
-
-        #erd.run[N](a, b)
-        erd.run(a, b)
-
-        erd.memcpy2host(c)
+        #erd.run[N](a, b, ">", c)
+        erd.run(a, b, "->", c)
 
     assert c.sum() == a.sum() + b.sum()

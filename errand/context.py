@@ -3,6 +3,7 @@
 from functools import partial
 from numpy import ndarray
 
+from errand.orderpad import OrderPads
 
 class _Context(object):
 
@@ -11,7 +12,7 @@ class _Context(object):
 
     def __call__(self, *vargs, **kwargs):
 
-        # TODO: find out from ndarray shape of vargs
+        # TODO: find out launch config from ndarray shape of vargs
         launch_config = (1,)
 
         for arg in vargs:
@@ -31,24 +32,43 @@ class _Context(object):
         return partial(self._launcher, config=indices)
 
 
+#class _VarMap(object):
+#
+#    def __init__(self):
+#
+#        self._varmap = {} # H:D
+#
+#    def H2D(self, *vargs, **kwargs):
+#
+#        for varg in vargs:
+#            if varg not in self._varmap:
+#                if isinstance(varg, ndarray):
+#                    self._varmap[varg] = None
+#
+#                else:
+#                    import pdb; pdb.set_trace()
+#
+#            if self._varmap[varg] is None:
+#                import pdb; pdb.set_trace()
+#
+#    def D2H(self, *vargs, **kwargs):
+#
+#        for varg in vargs:
+#            import pdb; pdb.set_trace()
+
 class Context(object):
 
     def __init__(self, esf, engine):
 
         self.esf = esf
         self.engine = engine
+        self.orderpads = OrderPads()
         self.run = _Context(self._kernel_launch)
 
     def _kernel_launch(self, *vargs, **kwargs):
 
-        return self.engine.kernel_launch(self.esf, kwargs["config"], *vargs)
+        return self.engine.kernel_launch(self.orderpads, self.esf, kwargs["config"], *vargs)
 
     def finish(self):
-        pass
-
-    def memcpy2device(self, *vargs, **kwargs):
-        pass
-
-    def memcpy2host(self, *vargs, **kwargs):
         pass
 

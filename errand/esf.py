@@ -2,46 +2,21 @@
 
 import re, ast
 from collections import OrderedDict as odict
-
-def appeval(text, env):
-
-    if not text or not isinstance(text, str):
-        return text
-
-    val = None
-    lenv = odict()
-
-    stmts = ast.parse(text).body
-
-    if len(stmts) == 1 and isinstance(stmts[-1], ast.Expr):
-        val = eval(text, env, lenv)
-
-    else:
-        exec(text, env, lenv)
-
-    return val, lenv
-
-def funcargseval(text, env):
-
-    env["_appeval_p"] = _p
-    fargs, out = appeval("_appeval_p(%s)" % text, env)
-    del env["_appeval_p"]
-    return fargs, out
+from errand.util import funcargseval
 
 class SourceFile(object):
 
     def __init__(self, path):
 
-        self.header, self.sections = self._parse(path)
+        self.sections = self._parse(path)
 
     def get_signature(self):
-        # TODO get signature section
-        # TODO parse section header and section body
-        import pdb; pdb.set_trace()
+
+        return self.sections["signature"]
 
     def get_section(self, secname):
-        import pdb; pdb.set_trace()
-        return self.sections
+
+        return self.sections[secname]
 
     def _parse(self, path):
 
@@ -83,7 +58,7 @@ class SourceFile(object):
                             self._parse_section(buf))
                     sections[secname] = (secargs, secattrs, secbody)
                    
-        return header, sections
+        return sections
 
     def _parse_section(self, lines):
 
@@ -91,6 +66,7 @@ class SourceFile(object):
 
         clines = []
         C = False
+        lenv = None
            
         for line in lines:
             if C:
@@ -106,7 +82,8 @@ class SourceFile(object):
                 clines[-1] = clines[-1][:pos]
                 C = True
 
-        section = (None, "", {}, [])
+        # sec name(str), sec args(str), control arguments(dict), section body(list of strings)
+        section = [None, "", None, []]
 
         for cline in clines:
             if cline and cline[0] == "[":
@@ -115,44 +92,53 @@ class SourceFile(object):
                     hdr = rsline[1:-1]
 
                     posc = hdr.find(":")
-                    if posc
-                        section[0] = hdr[:posc]
-                        hdr = hdf[posc+1:].strip()
-
-                    else:
-                        posa = hdr.find("@")
-                        if posa:
-                            section[0] = hdr[:posa].strip()
-                            hdr = hdf[posa:].strip()
-
-                        else:
-                            section[0] = hdr.strip()
-                            hdr = None
+                    if posc>=0:
+                        section[0] = hdr[:posc].strip()
+                        hdr = hdr[posc+1:].strip()
 
                     start = 0
 
                     while hdr:
-                        posa = hdr.find("@", start=start)
-                        if posa
-                            _args = hdr[:posa]
-                            _attrs = hdr[posa+1:]
+                        posa = hdr.find("@", start)
 
-                            ####
+                        if posa >= 0:
+                            _args = hdr[:posa].strip()
+                            _attrs = hdr[posa+1:].strip()
 
-                            start = posa + 1
+                            try:
+                                parsed = ast.parse(_attrs)
+                                if section[0]:
+                                    section[1] = _args
+
+                                else:
+                                    section[0] = _args
+
+                                _, section[2] = funcargseval(_attrs, lenv)
+                                break
+
+                            except SyntaxError as err:
+                                start = posa + 1
+
+                            else:
+                                raise
 
                         else:
-                            section[0] = hdr.strip()
+                            if hdr:
+                                if section[0]:
+                                    raise Exception("Wrong section header format: %s" % hdr)
+
+                                else:
+                                    section[0] = hdr.strip()
+
                             hdr = None
 
                 else:
                     raise Exception("Wrong ESF section format: %s" % cline)
+
             elif section[0] is not None:
                 section[-1].append(cline)
 
             else:
                 raise Exception("Wrong section format: %s" % "\n".join(clines))
 
-        import pdb; pdb.set_trace()
-
-        return lines
+        return section

@@ -22,10 +22,10 @@ class Engine(Object):
         self.compiler = compiler
         self.workdir = workdir
 
-    def kernel_launch(self, esf, config, workdir, *vargs):
+    def kernel_launch(self, orderpads, esf, config, *vargs):
 
         # generate cuda source code
-        code = self.gencode(esf, *vargs)
+        code = self.gencode(orderpads, esf, *vargs)
 
         # compile the code to build so file
         obj = self.genobj(code)
@@ -37,7 +37,7 @@ class Engine(Object):
         accel(config, **vargs)
 
     def loadobj(self, obj):
-        # TODO: implement this
+
         head, tail = os.path.split(obj) 
         base, ext = os.path.splitext(tail) 
 
@@ -61,17 +61,67 @@ class Engine(Object):
 
 class CUDAEngine(Engine):
 
-    def gencode(self, esf, *vargs):
+    def vartype2str(self, vartype):
+        import pdb; pdb.set_trace()
+
+    def gensig(self, orderpads, sig, attrs, sbody):
+
+        FNAME = "Errand_Cuda_Function"
+        out = ""
+
+        _args = []
+
+        if sig:
+
+            # parse sig
+            pos = sig.find("->")
+
+            # TODO: add cuda specific C type indicaters
+
+            if pos >= 0:
+                _args = ([x.strip() for x in sig[:pos].split(",")] +
+                        [x.strip() for x in sig[pos+2:].split(",")])
+
+            else:
+                _args = [x.strip() for x in sig.split(",")]
+
+        # transform arg to cuda arg
+        args = []
+        isInput = True
+        for _a in _args:
+
+            if _a == "->":
+                isInput = False
+                continue
+
+            vartypestr = self.vartype2str(orderpads.get_vartype(_a, isInput))
+            args.append(vartypestr + " " + _a)
+
+        return "__global__ void %s(%s)" % (FNAME, ", ".join(args))
+
+    def genbody(self, orderpads, opts, attrs, body):
+
+        # TODO: allocation, copy to device
+
+        compute = "\n".join(body)
+
+        # TODO: deallocation, copy to host
+
+    def gencode(self, orderpads, esf, *vargs):
 
         code = {}
 
-        sig = esf.get_signature()
-        body = esf.get_section("cuda")
+        raw_sig = esf.get_signature()
+        raw_body = esf.get_section("cuda")
 
-        import pdb; pdb.set_trace()
+        orderpads.load_arguments(*vargs)
+        sig = self.gensig(orderpads, *raw_sig)
+        body = self.genbody(orderpads, *raw_body)
 
         # gen code name
         path = os.path.join(self.workdir, "code.cu")
+
+        # TODO: add shared library boiler-plate code
 
         # write code
         with open(path, "w") as f:
@@ -85,6 +135,8 @@ class CUDAEngine(Engine):
         return code
 
     def genobj(self, code):
+
+        # TODO: find nvcc
 
         nvcc = None
         # find compiler
@@ -126,13 +178,14 @@ class CUDAEngine(Engine):
                     "defaults": "--compiler-options '-fPIC' -o mylib.so --shared"
                 }
 
-        try:
-            cmd = "{nvcc} {opts} {defaults} {path}".format(cmdopts)
-            stdout = subp.check_output(cmd, shell=True, stderr=subp.STDOUT)
+        cmd = "{nvcc} {opts} {defaults} {path}".format(**cmdopts)
+        #stdout = subp.check_output(cmd, shell=True, stderr=subp.STDOUT)
+        out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
-        except Exception as err:
-            print(err.stdout)
-            sys.exit(err.returncode)
+        import pdb ;pdb.set_trace()
+        if out.returncode  != 0:
+            print(out.stderr)
+            sys.exit(out.returncode)
 
         return nvcc
 

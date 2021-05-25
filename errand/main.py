@@ -44,23 +44,23 @@ class Errand(object):
             assert esf is not None
 
             # load gpu engine
-            engine = None
+            engine_cls = None
 
             if self.engine is None:
-                cls = self._choose_best_engine(esf)
-                engine = cls(self.compiler, self.tempdir)
+                engine_cls = self._choose_best_engine(esf)
 
             elif isinstance(self.engine, str):
-                cls = self._get_engine(self.engine)
-                engine = cls(self.compiler, self.tempdir)
+                engine_cls = self._get_engine(self.engine)
 
             elif issubclass(self.engine, Engine):
-                engine = self.engine(self.compiler, self.tempdir)
+                engine_cls = self.engine
 
             elif not isinstance(self.engine, Engine):
                 raise Exception("Wrong engine type: %s" % str(self.engine))
 
-            assert engine is not None
+            assert engine_cls is not None
+
+            engine = engine_cls(self.compiler, self.tempdir)
 
             self.ctx = Context(esf, engine)
 
