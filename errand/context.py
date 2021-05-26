@@ -2,6 +2,7 @@
  
 from functools import partial
 from numpy import ndarray
+from inspect import currentframe
 
 from errand.orderpad import OrderPads
 
@@ -15,12 +16,27 @@ class _Context(object):
         # TODO: find out launch config from ndarray shape of vargs
         launch_config = (1,)
 
+        argnames = []
+        varids = {}
+
+        for n, v in currentframe().f_back.f_locals.items():
+            varids[id(v)] = n
+
+        for varg in vargs:
+            if varg == "->":
+                argnames.append(varg)
+
+            else:
+                vid = id(varg)
+                if vid in varids:
+                    argnames.append(varids[vid])
+
         for arg in vargs:
             if isinstance(arg, ndarray):
                 launch_config = arg.shape
                 break
 
-        pfunc = partial(self._launcher, config=launch_config)
+        pfunc = partial(self._launcher, config=launch_config, argnames=argnames)
 
         return pfunc(*vargs, **kwargs)
 
@@ -67,7 +83,8 @@ class Context(object):
 
     def _kernel_launch(self, *vargs, **kwargs):
 
-        return self.engine.kernel_launch(self.orderpads, self.esf, kwargs["config"], *vargs)
+        return self.engine.kernel_launch(self.orderpads, self.esf,
+            kwargs["config"], kwargs["argnames"], *vargs)
 
     def finish(self):
         pass

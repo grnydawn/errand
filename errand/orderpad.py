@@ -13,18 +13,49 @@ from numpy import ndarray
 
 # TODO: order in queue depends on other order such as kernel launch
 
+
 class Order(object):
-    pass
+
+    D_MALLOC, H2D_MEMCPY = range(2)
+
+    def __init__(self, ordertype, minfo):
+        self.ordertype = ordertype
+        self.minfo = minfo
 
 
 class MemInfo(object):
 
     def __init__(self, arg):
         self.ndarr = arg
+        self.intype = None
+        self.outtype = None 
+        self.dalloc = None
+        self.h2dcopied = None
+        self.d2hcopied = None
 
+    def set_input(self, intype=True):
+        self.intype = intype
+
+    def set_output(self, outtype=True):
+        self.outtype = outtype
+
+    def is_dallocated(self):
+        return self.dalloc is not None
+
+    def is_h2dcopied(self):
+        return self.h2dcopied is not None
+
+    def is_d2hcopied(self):
+        return self.d2hcopied is not None
 
 class OrderQueue(object):
-    pass
+
+    def __init__(self): 
+        self.queue = []
+
+    def append(self, order):
+        self.queue.append(order)
+
 
 class OrderPad(object):
 
@@ -56,7 +87,7 @@ class OrderPad(object):
             if isInput:
                 minfo.set_input()
 
-                if not minfo.is_dalloc():
+                if not minfo.is_dallocated():
                     self._queue.append(Order(Order.D_MALLOC, minfo))
 
                 if not minfo.is_h2dcopied():
@@ -65,12 +96,12 @@ class OrderPad(object):
             else:
                 minfo.set_output()
 
-                if self._mmap[uid][2] is None:
-                    self._mmap[uid][2] = True
 
     def get_vartype(self, arg, isInput):
 
-        assert arg in self._mmap, "Argument '%s' is not in orderpad." % arg
+        uid = id(arg)
+        import pdb; pdb.set_trace()
+        assert uid in self._mmap, "Argument '%s' is not in orderpad." % arg
 
         import pdb; pdb.set_trace()
 
@@ -89,4 +120,12 @@ class OrderPads(object):
             orderpad = self.DEFAULT_ORDERPAD
 
         return self._orderpads[orderpad].load_arguments(*args)
+
+
+    def get_vartype(self, arg, isInput, orderpad=None):
+
+        if orderpad is None:
+            orderpad = self.DEFAULT_ORDERPAD
+
+        return self._orderpads[orderpad].get_vartype(arg, isInput)
 

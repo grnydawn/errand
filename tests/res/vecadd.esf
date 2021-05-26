@@ -1,5 +1,5 @@
 
-[signature: a, b, N -> c @ key="test"]
+[signature: a, b -> c @ key="test"]
 
     // may define specific types of arguments
     // may define global variables

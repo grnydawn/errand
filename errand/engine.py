@@ -22,10 +22,10 @@ class Engine(Object):
         self.compiler = compiler
         self.workdir = workdir
 
-    def kernel_launch(self, orderpads, esf, config, *vargs):
+    def kernel_launch(self, orderpads, esf, config, argnames, *vargs):
 
         # generate cuda source code
-        code = self.gencode(orderpads, esf, *vargs)
+        code = self.gencode(orderpads, esf, config, argnames, *vargs)
 
         # compile the code to build so file
         obj = self.genobj(code)
@@ -34,7 +34,7 @@ class Engine(Object):
         accel = self.loadobj(obj)
 
         # launch cuda kernel
-        accel(config, **vargs)
+        accel(**vargs)
 
     def loadobj(self, obj):
 
@@ -64,7 +64,7 @@ class CUDAEngine(Engine):
     def vartype2str(self, vartype):
         import pdb; pdb.set_trace()
 
-    def gensig(self, orderpads, sig, attrs, sbody):
+    def gensig(self, orderpads, argnames, sig, attrs, sbody):
 
         FNAME = "Errand_Cuda_Function"
         out = ""
@@ -79,12 +79,16 @@ class CUDAEngine(Engine):
             # TODO: add cuda specific C type indicaters
 
             if pos >= 0:
-                _args = ([x.strip() for x in sig[:pos].split(",")] +
+                _args = ([x.strip() for x in sig[:pos].split(",")] + ["->"] +
                         [x.strip() for x in sig[pos+2:].split(",")])
 
             else:
                 _args = [x.strip() for x in sig.split(",")]
 
+        else:
+            _args = argnames 
+
+        # TODO: get the index of arg and use the index to match with real variable
         # transform arg to cuda arg
         args = []
         isInput = True
@@ -99,7 +103,7 @@ class CUDAEngine(Engine):
 
         return "__global__ void %s(%s)" % (FNAME, ", ".join(args))
 
-    def genbody(self, orderpads, opts, attrs, body):
+    def genbody(self, orderpads, config, opts, attrs, body):
 
         # TODO: allocation, copy to device
 
@@ -107,7 +111,7 @@ class CUDAEngine(Engine):
 
         # TODO: deallocation, copy to host
 
-    def gencode(self, orderpads, esf, *vargs):
+    def gencode(self, orderpads, esf, config, argnames, *vargs):
 
         code = {}
 
@@ -115,8 +119,8 @@ class CUDAEngine(Engine):
         raw_body = esf.get_section("cuda")
 
         orderpads.load_arguments(*vargs)
-        sig = self.gensig(orderpads, *raw_sig)
-        body = self.genbody(orderpads, *raw_body)
+        sig = self.gensig(orderpads, argnames, *raw_sig)
+        body = self.genbody(orderpads, config, *raw_body)
 
         # gen code name
         path = os.path.join(self.workdir, "code.cu")
