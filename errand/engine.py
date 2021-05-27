@@ -7,6 +7,14 @@ Object = abc.ABCMeta("Object", (object,), {})
 
 LEN_FILENAME = 16
 
+cls_template = """class {clsname} {
+    public:
+        {dtype} data;
+        int size;
+}"""
+
+
+
 def _which(pgm):
     path=os.getenv('PATH')
     for p in path.split(os.path.pathsep):
@@ -62,16 +70,58 @@ class Engine(Object):
 class CUDAEngine(Engine):
 
     def vartype2str(self, vartype):
-        import pdb; pdb.set_trace()
 
-    def gensig(self, orderpads, argnames, sig, attrs, sbody):
+        vstr = ""
+
+        if vartype == "float64":
+            vstr = "double *"        
+
+        else:
+            raise Exception("Not supported variable type: %s " % vartype)
+
+        return vstr
+
+    def gensig(self, orderpad, sig, attrs, sbody):
 
         FNAME = "Errand_Cuda_Function"
         out = ""
 
+        # TODO: get the index of arg and use the index to match with real variable
+        # transform arg to cuda arg
+        args = []
+        isInput = True
+        for _a in orderpad.get_argnames():
+
+            self.....
+            vartypestr = self.vartype2str(orderpad.get_vartype(_a, isInput))
+            # TODO: generate class for vartype
+
+            args.append(vartypestr + " " + _a)
+
+        return "__global__ void %s(%s)" % (FNAME, ", ".join(args))
+
+    def genbody(self, orderpads, config, opts, attrs, body):
+
+        # TODO: allocation, copy to device
+
+        compute = "\n".join(body)
+
+        # TODO: deallocation, copy to host
+
+        return compute
+
+    def gencode(self, orderpads, esf, config, argnames, *vargs):
+
+        output = {}
+
+        raw_sig = esf.get_signature()
+        raw_body = esf.get_section("cuda")
+
         _args = []
 
-        if sig:
+        if raw_sig:
+
+            sig, attrs, sbody = raw_sig
 
             # parse sig
             pos = sig.find("->")
@@ -86,41 +136,14 @@ class CUDAEngine(Engine):
                 _args = [x.strip() for x in sig.split(",")]
 
         else:
+            sig, attrs, sbody = "", {}, ""
             _args = argnames 
 
-        # TODO: get the index of arg and use the index to match with real variable
-        # transform arg to cuda arg
-        args = []
-        isInput = True
-        for _a in _args:
+        orderpad = orderpads.get_curorderpad()
+        orderpad.load_arguments(_args, *vargs)
 
-            if _a == "->":
-                isInput = False
-                continue
-
-            vartypestr = self.vartype2str(orderpads.get_vartype(_a, isInput))
-            args.append(vartypestr + " " + _a)
-
-        return "__global__ void %s(%s)" % (FNAME, ", ".join(args))
-
-    def genbody(self, orderpads, config, opts, attrs, body):
-
-        # TODO: allocation, copy to device
-
-        compute = "\n".join(body)
-
-        # TODO: deallocation, copy to host
-
-    def gencode(self, orderpads, esf, config, argnames, *vargs):
-
-        code = {}
-
-        raw_sig = esf.get_signature()
-        raw_body = esf.get_section("cuda")
-
-        orderpads.load_arguments(*vargs)
-        sig = self.gensig(orderpads, argnames, *raw_sig)
-        body = self.genbody(orderpads, config, *raw_body)
+        sig = self.gensig(orderpad, sig, attrs, sbody)
+        body = self.genbody(orderpad, config, *raw_body)
 
         # gen code name
         path = os.path.join(self.workdir, "code.cu")
@@ -128,15 +151,16 @@ class CUDAEngine(Engine):
         # TODO: add shared library boiler-plate code
 
         # write code
+        code = [sig, "{", body, "}"]
+        
         with open(path, "w") as f:
-            f.write(sig + "\n")
-            f.write("{" + "\n")
-            f.write(body + "\n")
-            f.write("}")
+            codestr = "\n".join(code)
+            print("\n"+codestr)
+            f.write(codestr)
 
-        code["path"] = path
+        output["path"] = path
 
-        return code
+        return output
 
     def genobj(self, code):
 
@@ -186,7 +210,6 @@ class CUDAEngine(Engine):
         #stdout = subp.check_output(cmd, shell=True, stderr=subp.STDOUT)
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
-        import pdb ;pdb.set_trace()
         if out.returncode  != 0:
             print(out.stderr)
             sys.exit(out.returncode)

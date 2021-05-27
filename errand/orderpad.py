@@ -48,6 +48,9 @@ class MemInfo(object):
     def is_d2hcopied(self):
         return self.d2hcopied is not None
 
+    def get_typename(self):
+        return self.ndarr.dtype.name
+
 class OrderQueue(object):
 
     def __init__(self): 
@@ -63,26 +66,37 @@ class OrderPad(object):
 
         self._queue = OrderQueue()
         self._mmap = {}
+        self._argnames = []
 
-    def load_arguments(self, *args):
+    def get_argnames(self):
+        return self._argnames
+
+    def load_arguments(self, argnames, *args):
 
         isInput = True
 
-        for arg in args:
+        for aname, arg in zip(argnames, args):
 
             if arg == "->":
                 isInput = False
+
+                if arg != aname:
+                    raise Exception("Non-matching argument: (%s, %s)" % (arg, aname))
+
                 continue
+
+            self._argnames.append(aname)
 
             if not isinstance(arg, ndarray):
                 assert False, "TODO: handle non-ndarray variable"
 
-            uid = id(arg)
+            if aname in self._mmap:
+                assert self._mmap[anme] is arg, "Mis-match argument: (%s, %s)" % (self._mmap[anme], arg)
 
-            if uid not in self._mmap:
-                self._mmap[uid] = MemInfo(arg)
+            else:
+                self._mmap[aname] = MemInfo(arg)
             
-            minfo = self._mmap[uid]
+            minfo = self._mmap[aname]
 
             if isInput:
                 minfo.set_input()
@@ -99,11 +113,9 @@ class OrderPad(object):
 
     def get_vartype(self, arg, isInput):
 
-        uid = id(arg)
-        import pdb; pdb.set_trace()
-        assert uid in self._mmap, "Argument '%s' is not in orderpad." % arg
+        assert arg in self._mmap, "Argument '%s' is not in orderpad." % arg
 
-        import pdb; pdb.set_trace()
+        return self._mmap[arg].get_typename()
 
 
 class OrderPads(object):
@@ -113,19 +125,23 @@ class OrderPads(object):
     def __init__(self):
 
         self._orderpads = {self.DEFAULT_ORDERPAD: OrderPad()}
+        self._current = self.DEFAULT_ORDERPAD
 
-    def load_arguments(self, *args, orderpad=None):
-
-        if orderpad is None:
-            orderpad = self.DEFAULT_ORDERPAD
-
-        return self._orderpads[orderpad].load_arguments(*args)
-
-
-    def get_vartype(self, arg, isInput, orderpad=None):
-
-        if orderpad is None:
-            orderpad = self.DEFAULT_ORDERPAD
-
-        return self._orderpads[orderpad].get_vartype(arg, isInput)
-
+    def get_curorderpad(self):
+        return self._orderpads[self.DEFAULT_ORDERPAD]
+#        
+#    def load_arguments(self, argnames, *args, orderpad=None):
+#
+#        if orderpad is None:
+#            orderpad = self.DEFAULT_ORDERPAD
+#
+#        return self._orderpads[orderpad].load_arguments(argnames, *args)
+#
+#
+#    def get_vartype(self, arg, isInput, orderpad=None):
+#
+#        if orderpad is None:
+#            orderpad = self.DEFAULT_ORDERPAD
+#
+#        return self._orderpads[orderpad].get_vartype(arg, isInput)
+#

@@ -11,12 +11,12 @@
 [cuda: -O3 @ compiler="nvcc"]
 
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if(id < N) c.data[id] = a.data[id] + b.data[id];
+    if(id < a.size) c.data[id] = a.data[id] + b.data[id];
 
 [hip]
 
     // int id = hipThreadIdx_x;
     // if(id < N) c.data[id] = a.data[id] + b.data[id];
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if(id < N) c.data[id] = a.data[id] + b.data[id];
+    if(id < a.size) c.data[id] = a.data[id] + b.data[id];
 

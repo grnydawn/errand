@@ -12,11 +12,11 @@ class SourceFile(object):
 
     def get_signature(self):
 
-        return self.sections["signature"]
+        return self.sections.get("signature", None)
 
     def get_section(self, secname):
 
-        return self.sections[secname]
+        return self.sections.get(secname, None)
 
     def _parse(self, path):
 
