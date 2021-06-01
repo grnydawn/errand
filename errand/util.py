@@ -1,6 +1,6 @@
 '''Errand utility module'''
 
-import ast
+import os, ast
 from collections import OrderedDict
 
 exclude_list = ["exec", "eval", "breakpoint", "memoryview"]
@@ -42,3 +42,10 @@ def funcargseval(text, lenv):
     fargs, out = appeval("_appeval_p(%s)" % text, env)
 
     return fargs
+
+def which(pgm):
+    path=os.getenv('PATH')
+    for p in path.split(os.path.pathsep):
+        p=os.path.join(p,pgm)
+        if os.path.exists(p) and os.access(p,os.X_OK):
+            return p
