@@ -1,91 +1,51 @@
-"""Errand Context module"""
- 
-from functools import partial
-from numpy import ndarray
-from inspect import currentframe
+"""Errand context module
 
-from errand.orderpad import OrderPads
+Define Errand context
 
-class _Context(object):
+"""
 
-    def __init__(self, launcher):
-        self._launcher = launcher
-
-    def __call__(self, *vargs, **kwargs):
-
-        # TODO: find out launch config from ndarray shape of vargs
-        launch_config = (1,)
-
-        argnames = []
-        varids = {}
-
-        for n, v in currentframe().f_back.f_locals.items():
-            varids[id(v)] = n
-
-        for varg in vargs:
-            if varg == "->":
-                argnames.append(varg)
-
-            else:
-                vid = id(varg)
-                if vid in varids:
-                    argnames.append(varids[vid])
-
-        for arg in vargs:
-            if isinstance(arg, ndarray):
-                launch_config = arg.shape
-                break
-
-        pfunc = partial(self._launcher, config=launch_config, argnames=argnames)
-
-        return pfunc(*vargs, **kwargs)
-
-    def __getitem__(self, indices):
-
-        if isinstance(indices, int):
-            indices = (indices,)
-        
-        return partial(self._launcher, config=indices)
-
-
-#class _VarMap(object):
-#
-#    def __init__(self):
-#
-#        self._varmap = {} # H:D
-#
-#    def H2D(self, *vargs, **kwargs):
-#
-#        for varg in vargs:
-#            if varg not in self._varmap:
-#                if isinstance(varg, ndarray):
-#                    self._varmap[varg] = None
-#
-#                else:
-#                    import pdb; pdb.set_trace()
-#
-#            if self._varmap[varg] is None:
-#                import pdb; pdb.set_trace()
-#
-#    def D2H(self, *vargs, **kwargs):
-#
-#        for varg in vargs:
-#            import pdb; pdb.set_trace()
 
 class Context(object):
+    """Context class: provides consistent interface of Errand
 
-    def __init__(self, esf, engine):
+    * keep database
+"""
 
-        self.esf = esf
+    def __init__(self, order, engine, workdir):
+        self.order = order
         self.engine = engine
-        self.orderpads = OrderPads()
-        self.run = _Context(self._kernel_launch)
+        self.workdir = workdir
 
-    def _kernel_launch(self, *vargs, **kwargs):
+    def __getitem__(self, indices):
+        # TODO: define launch configuration from indices
 
-        return self.engine.kernel_launch(self.orderpads, self.esf,
-            kwargs["config"], kwargs["argnames"], *vargs)
+        return partial(self.run, config=indices)
 
-    def finish(self):
+    def run(self, *vargs, config=None):
+
+        # allocated and copy data from host to gpu if needed
+
+        # TODO: launch GPU kernel
+
+        # copy data from gpu to host if needed and deallocate
         pass
 
+    def shutdown(self):
+        pass
+
+class CudaContext(Context):
+    pass
+
+class HipContext(Context):
+    pass
+
+def select_context(order, engine, workdir):
+
+    if engine.name == "cuda":
+        return CudaContext(order, engine, workdir)
+
+    elif engine.name == "hip":
+        return HipContext(order, engine, workdir)
+
+    else:
+        raise Exception("Unknown context type: %s" % engine.name)

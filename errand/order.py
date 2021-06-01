@@ -1,26 +1,32 @@
-"""Errand source file module"""
+"""Errand order module
 
-import re, ast
-from collections import OrderedDict as odict
+
+"""
+
+import os, ast
+
 from errand.util import funcargseval
 
-class SourceFile(object):
+class Order(object):
 
-    def __init__(self, path):
+    def __init__(self, order):
 
-        self.sections = self._parse(path)
+        if isinstance(order, Order):
+            self.sections = order.sections
 
-    def get_signature(self):
+        elif os.path.isfile(order):
 
-        return self.sections.get("signature", None)
+            with open(order) as fd:
+                self.sections = self._parse(fd.readlines())
 
-    def get_section(self, secname):
+        elif isinstance(order, str):
+            self.sections = self._parse(order.split("\n"))
 
-        return self.sections.get(secname, None)
+        else:
+            raise Exception("Wrong order: %s" % str(order))
 
-    def _parse(self, path):
 
-        # TODO: use cache
+    def _parse(self, lines):
 
         header = None
         sections = {"_header_": None}
@@ -28,35 +34,34 @@ class SourceFile(object):
         stage = 0
         buf = []
 
-        with open(path) as fd:
-            for line in fd:
-                line = line.rstrip()
+        for line in lines:
+            line = line.rstrip()
 
-                if line and line[0] == "[":
-                    if stage == 0:
-                        if buf:
-                            sections["_header_"] = buf
-
-                        stage = 1
-
-                    elif stage == 1:
-                        if buf:
-                            secname, secargs, secattrs, secbody = (
-                                self._parse_section(buf))
-                            sections[secname] = (secargs, secattrs, secbody)
-
-                    buf = []
-
-                buf.append(line)
-
-            if buf:
+            if line and line[0] == "[":
                 if stage == 0:
-                    sections["_header_"] = buf
+                    if buf:
+                        sections["_header_"] = buf
+
+                    stage = 1
 
                 elif stage == 1:
-                    secname, secargs, secattrs, secbody = (
+                    if buf:
+                        secname, secargs, secattrs, secbody = (
                             self._parse_section(buf))
-                    sections[secname] = (secargs, secattrs, secbody)
+                        sections[secname] = (secargs, secattrs, secbody)
+
+                buf = []
+
+            buf.append(line)
+
+        if buf:
+            if stage == 0:
+                sections["_header_"] = buf
+
+            elif stage == 1:
+                secname, secargs, secattrs, secbody = (
+                        self._parse_section(buf))
+                sections[secname] = (secargs, secattrs, secbody)
                    
         return sections
 

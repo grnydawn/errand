@@ -13,7 +13,7 @@ def test_cuda():
     b = np.ones(N)
     c = np.zeros(N)
 
-    esf = os.path.join(here, "res", "vecadd.esf")
+    esf = os.path.join(here, "res", "vecadd.ord")
 
     with Errand(esf, engine="cuda") as erd:
 
