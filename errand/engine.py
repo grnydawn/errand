@@ -13,7 +13,10 @@ class Engine(object):
 
     * keep as transparent and passive as possible
 """
-    pass
+
+    @abc.abstractmethod
+    def devmalloc(self, size):
+        pass
 
 
 class CudaEngine(Engine):
@@ -22,26 +25,38 @@ class CudaEngine(Engine):
 
     def __init__(self):
 
-        self.compiler = which("nvcc")
-        if not os.path.isfile(self.compiler):
+        compiler = which("nvcc")
+        if compiler is None or not os.path.isfile(compiler):
             raise Exception("nvcc is not found")
 
-        self.rootdir = os.path.join(os.path.dirname(self.compiler), "..")
+        self.compiler = os.path.realpath(compiler)
 
-        self.incdir = os.path.join(self.rootdir, "include")
-        if not os.path.isdir(self.incdir):
-            raise Exception("Can not find include directory")
+        # TODO: compile and load runtime library wrapper per compiler
 
-        self.libdir = os.path.join(self.rootdir, "lib64")
-        if not os.path.isdir(self.libdir):
-            raise Exception("Can not find library directory")
+#        self.rootdir = os.path.join(os.path.dirname(self.compiler), "..")
+#
+#        self.incdir = os.path.join(self.rootdir, "include")
+#        if not os.path.isdir(self.incdir):
+#            raise Exception("Can not find include directory")
+#
+#        self.libdir = os.path.join(self.rootdir, "lib64")
+#        if not os.path.isdir(self.libdir):
+#            raise Exception("Can not find library directory")
+#
+#        self.libdir = os.path.join(self.rootdir, "lib64")
+#        if not os.path.isdir(self.libdir):
+#            raise Exception("Can not find library directory")
+#
+#        self.libcudart = load_library("libcudart", self.libdir)
 
-        self.libdir = os.path.join(self.rootdir, "lib64")
-        if not os.path.isdir(self.libdir):
-            raise Exception("Can not find library directory")
 
-        self.libcudart = load_library("libcudart", self.libdir)
+    def devmalloc(self, size):
 
+        # (ctypes.c_ulong*3)()
+        #a_p = a.ctypes.data_as(POINTER(c_float))
+
+        import pdb; pdb.set_trace()
+        pass
 
 class HipEngine(Engine):
 
@@ -49,9 +64,12 @@ class HipEngine(Engine):
 
     def __init__(self):
 
-        self.compiler = which("hipcc")
-        if not os.path.isfile(self.compiler):
+        compiler = which("hipcc")
+
+        if compiler is None or not os.path.isfile(compiler):
             raise Exception("hipcc is not found")
+
+        self.compiler = os.path.realpath(compiler)
 
         self.rootdir = os.path.join(os.path.dirname(self.compiler), "..")
 
@@ -59,10 +77,15 @@ class HipEngine(Engine):
         if not os.path.isdir(self.incdir):
             raise Exception("Can not find include directory")
 
-        self.libdir = os.path.join(self.rootdir, "lib64")
+        self.libdir = os.path.join(self.rootdir, "lib")
         if not os.path.isdir(self.libdir):
-            raise Exception("Can not find library directory")
+            self.libdir = os.path.join(self.rootdir, "lib64")
 
+            if not os.path.isdir(self.libdir):
+                raise Exception("Can not find library directory")
+
+    def devmalloc(self, size):
+        pass
 
 def select_engine(engine, order):
 

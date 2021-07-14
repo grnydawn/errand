@@ -5,7 +5,7 @@
 import shutil, tempfile
 
 from errand.order import Order
-from errand.context import select_context
+from errand.context import Context
 from errand.engine import select_engine
 
 
@@ -28,7 +28,7 @@ class Errand(object):
     def __enter__(self):
 
         self.tempdir = tempfile.mkdtemp()
-        self.context =  select_context(self.order, self.engine, self.tempdir)
+        self.context =  Context(self.order, self.engine, self.tempdir)
 
         return self.context
 

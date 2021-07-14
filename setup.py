@@ -5,16 +5,15 @@ def main():
     from setuptools import setup, find_packages
     from errand.main import Errand as erd
 
-    console_scripts = ["errand=errand.__main__:main"]
     install_requires = ["numpy"]
 
     setup(
-        name=erd._name_,
-        version=erd._version_,
-        description=erd._description_,
-        long_description=erd._long_description_,
-        author=erd._author_,
-        author_email=erd._author_email_,
+        name="errand",
+        version="0.1.0",
+        description="pythonic excellerator interface",
+        long_description="pythonic excellerator interface",
+        author="Youngsung Kim",
+        author_email="youngsung.kim.act2@gmail.com",
         classifiers=[
             "Development Status :: 3 - Alpha",
             "Intended Audience :: Science/Research",
@@ -30,7 +29,6 @@ def main():
         packages=find_packages(exclude=["tests"]),
         include_package_data=True,
         install_requires=install_requires,
-        entry_points={ "console_scripts": console_scripts},
         project_urls={
             "Bug Reports": "https://github.com/grnydawn/errand/issues",
             "Source": "https://github.com/grnydawn/errand",

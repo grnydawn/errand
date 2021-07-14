@@ -1,3 +1,5 @@
+# NOTE: run "module load cray-python" on Spock
+
 NAME := errand
 PY := python3
 
