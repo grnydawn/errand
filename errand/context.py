@@ -4,7 +4,14 @@ Define Errand context
 
 """
 
+import time
+
+from errand.eboys import EBoys
+from errand.data import ManagedData
+
 from numpy import ndarray
+
+# TODO: Context is reposible to provide a concept of Errand for use
 
 class Context(object):
     """Context class: provides consistent interface of Errand
@@ -12,65 +19,70 @@ class Context(object):
     * keep database
 """
 
-    def __init__(self, order, engine, workdir):
+    def __init__(self, order, engine, workdir, context):
 
-        self.order = order
-        self.engine = engine
+        self.egroups = {}
+
+        self.order = order # what eboys to do
+        self.engine = engine # what eboys to use to complete the order
         self.workdir = workdir
+        self.within = context
 
-        self.devallocated = {}
-        self.devcopied = {}
-        self.inargs = []
-        self.outargs = []
+        # context should know all of current states
 
-    def __getitem__(self, indices):
-        # TODO: define launch configuration from indices
+    def call_eboys(self, num_eboys=None):
 
-        return partial(self.run, config=indices)
+        # may have many optional arguments that hints
+        # to determin how many eboys to be called, or the group hierachy 
+        # for now, let's call only one eboy
 
-    def run(self, *vargs, config=None, wait=False, copy2host=False):
+        if num_eboys is None:
+            num_eboys = 1
 
-        INARG = True
-        devargs = []
+        eboys = EBoys(num_eboys)
+        self.egroups[eboys] = {}
 
-        # allocated and copy data from host to gpu if needed
+        return eboys
+
+    def assign(self, eboys, *vargs, method=None):
+
         for varg in vargs:
+            if not isinstance(varg, ManagedData):
+                varg = ManagedData(varg)
 
-            if varg == "->":
-                continue
+            eboys.load(varg, assign_method=method)
 
-            mid = id(varg)
+    def run(self, eboys):
 
-            if mid not in self.devallocated:
-                self.devmalloc(varg)
+        # TODO: generate code
+        code = self.engine.gen_code(self.order, self.workdir)
 
-            if INARG:
-                self.inarg.append[varg]
+        # TODO: compile code
+        lib = self.engine.gen_sharedlib(code, self.workdir)
 
-                if mid not in self.devcopied or not self.devcopied[mid]:
-                    self.memcpy2dev(varg)
+        # TODO: assign it to eboys
+        eboys.run(lib)
 
-            else:
-                self.outarg.append[varg]
+    def gather(self, eboys, data, *vargs, tolist=False):
 
-        # launch GPU kernel
-        self.engine.launch(*devargs, config=config, wait=wait)
+        out = []
 
-        if copy2host:
-            for oarg in self.outargs:
-                self.memcpy2host(oarg)
+        out.append(self._gather(eboys, data))
 
-    def shutdown(self):
+        for varg in vargs:
+            out.append(self._gather(eboys, varg))
+            
+        return out if tolist or vargs else out[0]
+
+    def _gather(self, eboys, data):
         pass
 
-    def devmalloc(self, var):
+    def dismiss(self, *vargs):
 
-        if isinstance(var, ndarray):
+        for eboys in vargs:
+            eboys.dismiss()
 
-            # (ctypes.c_ulong*3)()
-            #a_p = a.ctypes.data_as(POINTER(c_float))
-            import pdb; pdb.set_trace()
-            self.devallocated[id(var)] = self.engine.devmalloc(var.nbytes)
+    def shutdown(self):
 
-        else:
-            import pdb; pdb.set_trace()
+        for eboys, cfg in self.egroups.items():
+            self.dismiss(eboys)

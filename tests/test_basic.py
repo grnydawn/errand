@@ -20,47 +20,32 @@ def test_cuda():
     # raja: indexset: launch configuration
 
     # include attrs of workshop like engine, ncores, nthreads/core, memory, ...
-    with Errand(esf, engine="hip") as erd:
+    # hip or cuda engine
+    with Errand(esf, engine="cuda") as erd:
 
-        # dmalloc occurs when needed
-        #erd.dmalloc(a)
-        #erd.dmalloc(b)
-        #erd.dmalloc(c)
-
-        # memcpy occurs when needed
-        #erd.h2dmemcpy(a)
-        #erd.h2dmemcpy(b)
-
-        # user knows multicore and add HINTS as they know more
-        # hints work only if available
-        # others can be specified in erd order file
-        # arrays are splitted per each thread so that each threads
-        # sees only the part assigned to them
-        # user sees data centri view - how to distribute my data to each core/threads
-        # errand can dynamically use the # of cores and generate source code accordingly
+        # hierachical settings: order -> context -> base
+        # best-effort of guessing default settings
+        # eboys: one eboy is a thread(can be grouped multiple level, group, company, ...)
+        # order: things to do(can have specific settings with multiple versions)
+        # data: workload(managed between host-device, splitted and assigned to eboy)
+        # engine is a hidden to user, that provides common interface to devices
+        # context brings magic to user with coordination of eboys, order, and data with engine
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
-        # split data and assign to block/threads
-        # each threads run the assigned data and additional data
-
-        # 1. create block/threads and assign to cores
-        # 2. creates data and split and copy and assign to block/threads
-
+        # call errand boys with optional hierachical groups
         eboys = erd.call_eboys()
-        sa, sb, sc = eboys.chop(a, b, c)
-        eboys.run(sa, sb, sc)
 
-# may order file handles reduce or loop
-#        erd.parallel(a, b, "->", c)
-#        erd.parallel_for(a, b, "->", c)
-#        erd.parallel_reduce(a, b, "->", c)
+        # assign workload to eboys/groups/eboy
+        # may add reduce=method argument
+        erd.assign(eboys, a, b, c)
+        #erd.assign(eboys, a, b, c, reduce=erd.reduce.sum(c))
 
-        # memcpy occurs when needed
-        #erd.d2hmemcpy(c)
+        # go!~
+        erd.run(eboys)
 
-        # free at exit automatically
-        #erd.dfree(a)
-        #erd.dfree(b)
-        #erd.dfree(c)
-
+        # gather result of the task
+        erd.gather(eboys, c)
+        #reduced_c = erd.gather(eboys, c) if reduce is used
+ 
     assert c.sum() == a.sum() + b.sum()
+    #assert reduced_c == a.sum() + b.sum()

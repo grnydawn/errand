@@ -14,21 +14,19 @@ class Errand(object):
 
 * manage temporary directory
 * initialze errand activities
-  - load order file
-  - load gpu engine
 * finalize errand activities
-  - unload gpu engine
 """
 
-    def __init__(self, order, engine=None):
+    def __init__(self, order, engine=None, errand=None):
 
         self.order = Order(order)
         self.engine = select_engine(engine, self.order)
+        self.errand = errand
         
     def __enter__(self):
 
         self.tempdir = tempfile.mkdtemp()
-        self.context =  Context(self.order, self.engine, self.tempdir)
+        self.context =  Context(self.order, self.engine, self.tempdir, self.errand)
 
         return self.context
 
