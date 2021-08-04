@@ -26,13 +26,18 @@ using namespace std;
 // dim: 0, 1,2,3,4,5
 // type: int, float, char, boolean
 
+struct DoubleDim1 {{
+    double * data;
+    int size;
+}};
+
 {dvardefs}
 
 {dvarcopyins}
 
 {dvarcopyouts}
 
-__global__ void kernel(double * a, double * b, double *c){{
+__global__ void kernel(double * a, double * b, double *c, DoubleDim1 aa){{
     {devcodebody}
 }}
 
@@ -43,7 +48,10 @@ extern "C" void h2dcopy_a(void * data, int size) {{
     cudaMalloc((void **)&d_a_size, sizeof(int));
     cudaMemcpy(d_a, h_a, size * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(d_a_size, &(h_a_size), sizeof(int), cudaMemcpyHostToDevice);
-    printf("BBBBBB %p, %f", d_a, h_a[0]);
+
+    //cudaMalloc((void **)&dd_a, sizeof(DoubleDim1));
+    cudaMalloc((void **)&dd_a.data, size * sizeof(double));
+    cudaMemcpy(dd_a.data, h_a, size * sizeof(double), cudaMemcpyHostToDevice);
 }}
 
 extern "C" void h2dcopy_b(void * data, int size) {{
@@ -75,7 +83,7 @@ extern "C" int isalive() {{
 
 extern "C" int run() {{
 
-    kernel<<<{ngrids}, {nthreads}>>>(d_a, d_b, d_c); 
+    kernel<<<{ngrids}, {nthreads}>>>(d_a, d_b, d_c, dd_a); 
 
     isfinished = 1;
 
@@ -136,6 +144,7 @@ class CudaEngine(Engine):
             dvd += "int h_%s_size;\n" % aname
             dvd += "__device__ double * d_%s;\n" % aname
             dvd += "__device__ int * d_%s_size;\n" % aname
+            dvd += "__device__ DoubleDim1 dd_%s;\n" % aname
 
         dvci = ""        
         dvco = ""        
