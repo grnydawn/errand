@@ -28,7 +28,11 @@ using namespace std;
 
 struct DoubleDim1 {{
     double * data;
-    int size;
+    int * _size;
+
+    __device__ int size() {{
+        return *_size;
+    }}
 }};
 
 {dvardefs}
@@ -37,43 +41,8 @@ struct DoubleDim1 {{
 
 {dvarcopyouts}
 
-__global__ void kernel(double * a, double * b, double *c, DoubleDim1 aa){{
+__global__ void kernel({devcodeargs}){{
     {devcodebody}
-}}
-
-extern "C" void h2dcopy_a(void * data, int size) {{
-    h_a = (double *) data;
-    h_a_size = size;
-    cudaMalloc((void **)&(d_a), size * sizeof(double));
-    cudaMalloc((void **)&d_a_size, sizeof(int));
-    cudaMemcpy(d_a, h_a, size * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_a_size, &(h_a_size), sizeof(int), cudaMemcpyHostToDevice);
-
-    //cudaMalloc((void **)&dd_a, sizeof(DoubleDim1));
-    cudaMalloc((void **)&dd_a.data, size * sizeof(double));
-    cudaMemcpy(dd_a.data, h_a, size * sizeof(double), cudaMemcpyHostToDevice);
-}}
-
-extern "C" void h2dcopy_b(void * data, int size) {{
-    h_b = (double *) data;
-    h_b_size = size;
-    cudaMalloc((void **)&(d_b), size * sizeof(double));
-    cudaMalloc((void **)&d_b_size, sizeof(int));
-    cudaMemcpy(d_b, h_b, size * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b_size, &(h_b_size), sizeof(int), cudaMemcpyHostToDevice);
-}}
-
-extern "C" void h2dcopy_c(void * data, int size) {{
-    h_c = (double *) data;
-    h_c_size = size;
-    cudaMalloc((void **)&(d_c), size * sizeof(double));
-    cudaMalloc((void **)&d_c_size, sizeof(int));
-    cudaMemcpy(d_c_size, &(h_c_size), sizeof(int), cudaMemcpyHostToDevice);
-}}
-
-extern "C" void d2hcopy_c(void * data, int size) {{
-    cudaMemcpy(h_c, d_c, size * sizeof(double), cudaMemcpyDeviceToHost);
-    data = (void *) h_c;
 }}
 
 extern "C" int isalive() {{
@@ -83,7 +52,7 @@ extern "C" int isalive() {{
 
 extern "C" int run() {{
 
-    kernel<<<{ngrids}, {nthreads}>>>(d_a, d_b, d_c, dd_a); 
+    kernel<<<{ngrids}, {nthreads}>>>({hostcallargs}); 
 
     isfinished = 1;
 
@@ -138,20 +107,39 @@ class CudaEngine(Engine):
         assert len(outnames) == len(outargs), "The number of input arguments mismatches."
 
         dvd = ""        
+        dvci = ""        
+        dca = []
+        hca = []
         for aname, (arg, attr) in zip(innames+outnames, inargs+outargs):
             self.argmap[id(arg)] = aname
             dvd += "double * h_%s;\n" % aname
             dvd += "int h_%s_size;\n" % aname
-            dvd += "__device__ double * d_%s;\n" % aname
-            dvd += "__device__ int * d_%s_size;\n" % aname
-            dvd += "__device__ DoubleDim1 dd_%s;\n" % aname
+            dvd += "__device__ DoubleDim1 d_%s;\n" % aname
 
-        dvci = ""        
-        dvco = ""        
+            dvci += "extern \"C\" void h2dcopy_%s(void * data, int size) {\n" % aname
+            dvci += "    h_%s = (double *) data;\n" % aname
+            dvci += "    h_%s_size = size;\n" % aname
+            dvci += "    cudaMalloc((void **)&d_%s.data, size * sizeof(double));\n" % aname
+            dvci += "    cudaMalloc((void **)&d_%s._size, sizeof(int));\n" % aname
+            dvci += "    cudaMemcpy(d_%s.data, h_%s, size * sizeof(double), cudaMemcpyHostToDevice);\n" % (aname, aname)
+            dvci += "    cudaMemcpy(d_%s._size, &h_%s_size, sizeof(int), cudaMemcpyHostToDevice);\n" % (aname, aname)
+            dvci += "}\n"
+
+            dca.append("DoubleDim1 %s" % aname)
+
+            hca.append("d_%s" % aname)
+
+        dvco = ""
+        for aname, (arg, attr) in zip(outnames, outargs):
+            dvco += "extern \"C\" void d2hcopy_c(void * data, int size) {\n"
+            dvco += "    cudaMemcpy(h_%s, d_%s.data, size * sizeof(double), cudaMemcpyDeviceToHost);\n" % (aname, aname)
+            dvco += "    data = (void *) h_%s;\n" % aname
+            dvco += "}\n"
+
 
         code = code_template.format(dvardefs=dvd, dvarcopyins=dvci, dvarcopyouts=dvco,
-            devcodebody=dcb, ngrids=ng, nthreads=nt)
-
+            devcodebody=dcb, devcodeargs=", ".join(dca), hostcallargs=", ".join(hca),
+            ngrids=ng, nthreads=nt)
 
         codepath = os.path.join(self.workdir, "test.cu")
         with open(codepath, "w") as f:
@@ -180,16 +168,10 @@ class CudaEngine(Engine):
         head, tail = os.path.split(outpath)
         base, ext = os.path.splitext(tail)
 
-        #array_1d_double = ndpointer(dtype=double, ndim=1, flags='CONTIGUOUS')
-
         # load the library, using numpy mechanisms
         self.kernel = load_library(base, head)
 
         return self.kernel
-
-        # setup the return types and argument types
-        #libkernel.run.restype = None
-        #libkernel.run.argtypes = [array_1d_double, array_1d_double, c_int]
 
         # launch cuda program
         #th = Thread(target=self.sharedlib.run)

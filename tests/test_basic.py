@@ -7,7 +7,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 
 def test_cuda():
 
-    N = 3
+    N = 100
 
     a = np.ones(N)
     b = np.ones(N) * 2

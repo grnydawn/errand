@@ -11,9 +11,8 @@
 [cuda: -O3 @ compiler="nvcc"]
 
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    printf("TTTT, %f", aa.data[0]);
-    if(id < 3) {
-        c[id] = a[id] + b[id];
+    if(id < a.size()) {
+        c.data[id] = a.data[id] + b.data[id];
         //printf("\nVal at %d = %f", id, c[id]);
     }
 
