@@ -3,11 +3,7 @@
 
 """
 
-import os, sys, abc
-
-from numpy.ctypeslib import load_library
-
-from errand.util import which
+import abc
 
 
 class Engine(abc.ABC):
@@ -19,38 +15,18 @@ class Engine(abc.ABC):
     def __init__(self, workdir):
         self.workdir = workdir
 
+    @abc.abstractmethod
+    def gencode(self, nteams, nmembers, inargs, outargs, order):
+        pass
 
-class CudaEngine(Engine):
+    @abc.abstractmethod
+    def h2dcopy(self, inargs, outargs):
+        pass
 
-    name = "cuda"
+    @abc.abstractmethod
+    def d2hcopy(self, inargs):
+        pass
 
-    def __init__(self, workdir):
-
-        super(CudaEngine, self).__init__(workdir)
-
-        compiler = which("nvcc")
-        if compiler is None or not os.path.isfile(compiler):
-            raise Exception("nvcc is not found")
-
-        self.compiler = os.path.realpath(compiler)
-
-        # TODO: compile and load runtime library wrapper per compiler
-
-        self.rootdir = os.path.join(os.path.dirname(self.compiler), "..")
-
-        self.incdir = os.path.join(self.rootdir, "include")
-        if not os.path.isdir(self.incdir):
-            raise Exception("Can not find include directory")
-
-        self.libdir = os.path.join(self.rootdir, "lib64")
-        if not os.path.isdir(self.libdir):
-            raise Exception("Can not find library directory")
-
-        self.libdir = os.path.join(self.rootdir, "lib64")
-        if not os.path.isdir(self.libdir):
-            raise Exception("Can not find library directory")
-
-        self.libcudart = load_library("libcudart", self.libdir)
 
 def select_engine(engine, order):
 
@@ -59,9 +35,11 @@ def select_engine(engine, order):
 
     if isinstance(engine, str):
         if engine == "cuda":
+            from errand.cuda import CudaEngine
             return CudaEngine
 
         elif engine == "hip":
+            from errand.hip import HipEngine
             return HipEngine
 
         else:

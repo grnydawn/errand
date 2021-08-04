@@ -8,8 +8,18 @@ class Gofers(object):
 
 """
 
-    def __init__(self, headcount):
-        self.headcount = headcount
+    def __init__(self, *sizes):
+
+        if len(sizes) == 2:
+            self.sizes = sizes
+
+        elif len(sizes) == 1:
+            self.sizes = [1, sizes[0]]
+
+        else:
+            raise Exception("Wrong # of Gofers initialization: %d" % len(sizes))
 
     def run(self, workshop):
-        pass
+
+        workshop.open(*self.sizes)
+

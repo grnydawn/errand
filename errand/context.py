@@ -19,10 +19,11 @@ class Context(object):
 
         self.tasks = {}
 
-        self.order = order # what eboys to do
-        self.engine = engine # what eboys to use to complete the order
+        self.order = order
+        self.engine = engine
         self.workdir = workdir
         self.context = context
+        self.output = []
 
     def gofers(self, num_gofers=None):
 
@@ -50,7 +51,7 @@ class Context(object):
             else:
                 inargs.append(varg)
 
-        ws = Workshop(inargs, outargs, **kwargs)
+        ws = Workshop(inargs, outargs, self.order, self.engine, self.workdir, **kwargs)
 
         self.tasks[ws] = {}
 
@@ -59,4 +60,4 @@ class Context(object):
     def shutdown(self):
 
         for ws in self.tasks:
-            ws.shutdown()
+            self.output.append(ws.close())
