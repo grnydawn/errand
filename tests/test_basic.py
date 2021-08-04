@@ -7,10 +7,10 @@ here = os.path.dirname(os.path.abspath(__file__))
 
 def test_cuda():
 
-    N = 10
+    N = 3
 
     a = np.ones(N)
-    b = np.ones(N)
+    b = np.ones(N) * 2
     c = np.zeros(N)
 
     esf = os.path.join(here, "res", "vecadd.ord")
@@ -33,7 +33,7 @@ def test_cuda():
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
         # logical worker entities
-        gofers = erd.gofers()
+        gofers = erd.gofers(N)
 
         # workshop represents machine, input&output, order, and engine
         workshop = erd.workshop(a, b, "->", c)

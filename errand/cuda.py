@@ -8,9 +8,80 @@ import subprocess as subp
 
 from numpy import double
 from numpy.ctypeslib import load_library, ndpointer
+from ctypes import c_double, c_size_t
 
 from errand.engine import Engine
 from errand.util import which
+
+
+code_template = """
+#include <stdio.h>
+#include <unistd.h>
+
+int isfinished = 0;
+
+using namespace std;
+
+// TODO: prepare all possible type/dim combinations
+// dim: 0, 1,2,3,4,5
+// type: int, float, char, boolean
+
+{dvardefs}
+
+{dvarcopyins}
+
+{dvarcopyouts}
+
+__global__ void kernel(double * a, double * b, double *c){{
+    {devcodebody}
+}}
+
+extern "C" void h2dcopy_a(void * data, int size) {{
+    h_a = (double *) data;
+    h_a_size = size;
+    cudaMalloc((void **)&(d_a), size * sizeof(double));
+    cudaMalloc((void **)&d_a_size, sizeof(int));
+    cudaMemcpy(d_a, h_a, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_a_size, &(h_a_size), sizeof(int), cudaMemcpyHostToDevice);
+    printf("BBBBBB %p, %f", d_a, h_a[0]);
+}}
+
+extern "C" void h2dcopy_b(void * data, int size) {{
+    h_b = (double *) data;
+    h_b_size = size;
+    cudaMalloc((void **)&(d_b), size * sizeof(double));
+    cudaMalloc((void **)&d_b_size, sizeof(int));
+    cudaMemcpy(d_b, h_b, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b_size, &(h_b_size), sizeof(int), cudaMemcpyHostToDevice);
+}}
+
+extern "C" void h2dcopy_c(void * data, int size) {{
+    h_c = (double *) data;
+    h_c_size = size;
+    cudaMalloc((void **)&(d_c), size * sizeof(double));
+    cudaMalloc((void **)&d_c_size, sizeof(int));
+    cudaMemcpy(d_c_size, &(h_c_size), sizeof(int), cudaMemcpyHostToDevice);
+}}
+
+extern "C" void d2hcopy_c(void * data, int size) {{
+    cudaMemcpy(h_c, d_c, size * sizeof(double), cudaMemcpyDeviceToHost);
+    data = (void *) h_c;
+}}
+
+extern "C" int isalive() {{
+
+    return isfinished;
+}}
+
+extern "C" int run() {{
+
+    kernel<<<{ngrids}, {nthreads}>>>(d_a, d_b, d_c); 
+
+    isfinished = 1;
+
+    return 0;
+}}
+"""
 
 
 class CudaEngine(Engine):
@@ -37,11 +108,10 @@ class CudaEngine(Engine):
 
         self.libdir = os.path.join(self.rootdir, "lib64")
         if not os.path.isdir(self.libdir):
-            raise Exception("Can not find library directory")
+            self.libdir = os.path.join(self.rootdir, "lib")
 
-        self.libdir = os.path.join(self.rootdir, "lib64")
-        if not os.path.isdir(self.libdir):
-            raise Exception("Can not find library directory")
+            if not os.path.isdir(self.libdir):
+                raise Exception("Can not find library directory")
 
         #self.libcudart = load_library("libcudart", self.libdir)
 
@@ -49,33 +119,36 @@ class CudaEngine(Engine):
         
         # generate source code
 
-        code = """
-#include <stdio.h>
-#include <unistd.h>
+        # {dvardefs} {dvarcopyins} {dvarcopyouts} {devcodebody} {ngrids} {nthreads}
+        ng = str(nteams)
+        nt = str(nmembers)
+        dcb = "\n".join(order.sections["cuda"][2])
 
-__global__ void cuda_hello(){
-    printf("Hello World from GPU!\\n");
-}
+        innames, outnames = order.get_argnames()
 
-int isfinished = 0;
+        assert len(innames) == len(inargs), "The number of input arguments mismatches."
+        assert len(outnames) == len(outargs), "The number of input arguments mismatches."
 
-extern "C" int isalive() {
+        dvd = ""        
+        for aname, (arg, attr) in zip(innames+outnames, inargs+outargs):
+            self.argmap[id(arg)] = aname
+            dvd += "double * h_%s;\n" % aname
+            dvd += "int h_%s_size;\n" % aname
+            dvd += "__device__ double * d_%s;\n" % aname
+            dvd += "__device__ int * d_%s_size;\n" % aname
 
-    return isfinished;
-}
+        dvci = ""        
+        dvco = ""        
 
-extern "C" int run() {
-    cuda_hello<<<1,1>>>(); 
+        code = code_template.format(dvardefs=dvd, dvarcopyins=dvci, dvarcopyouts=dvco,
+            devcodebody=dcb, ngrids=ng, nthreads=nt)
 
-    isfinished = 1;
 
-    return 0;
-}
-"""
         codepath = os.path.join(self.workdir, "test.cu")
         with open(codepath, "w") as f:
             f.write(code)
 
+        import pdb; pdb.set_trace()
         # compile
         opts = ""
 
@@ -89,6 +162,8 @@ extern "C" int run() {
         cmd = "{nvcc} {opts} {defaults} {path}".format(**cmdopts)
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
+        #import pdb; pdb.set_trace()
+
         if out.returncode  != 0:
             print(out.stderr)
             sys.exit(out.returncode)
@@ -96,10 +171,12 @@ extern "C" int run() {
         head, tail = os.path.split(outpath)
         base, ext = os.path.splitext(tail)
 
-        array_1d_double = ndpointer(dtype=double, ndim=1, flags='CONTIGUOUS')
+        #array_1d_double = ndpointer(dtype=double, ndim=1, flags='CONTIGUOUS')
 
         # load the library, using numpy mechanisms
-        return load_library(base, head)
+        self.kernel = load_library(base, head)
+
+        return self.kernel
 
         # setup the return types and argument types
         #libkernel.run.restype = None
@@ -110,8 +187,25 @@ extern "C" int run() {
         #th.start()
 
 
+
     def h2dcopy(self, inargs, outargs):
-        pass
+
+        for arg, attr in inargs+outargs:
+            #np.ascontiguousarray(x, dtype=np.float32)
+            name = self.argmap[id(arg)]
+            h2dcopy = getattr(self.kernel, "h2dcopy_%s" % name)
+            h2dcopy.restype = None
+            h2dcopy.argtypes = [ndpointer(c_double), c_size_t]
+
+            h2dcopy(arg, arg.size)
 
     def d2hcopy(self, outargs):
-        pass
+
+        for arg, attr in outargs:
+            name = self.argmap[id(arg)]
+            d2hcopy = getattr(self.kernel, "d2hcopy_%s" % name)
+            d2hcopy.restype = None
+            d2hcopy.argtypes = [ndpointer(c_double), c_size_t]
+
+            d2hcopy(arg, arg.size)
+

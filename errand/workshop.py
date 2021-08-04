@@ -31,7 +31,7 @@ class Workshop(object):
 
         self.engine.h2dcopy(self.inargs, self.outargs)
 
-        self.code.run()
+        return self.code.run()
 
     def close(self):
 

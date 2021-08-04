@@ -147,3 +147,6 @@ class Order(object):
                 raise Exception("Wrong section format: %s" % "\n".join(clines))
 
         return section
+
+    def get_argnames(self):
+        return ("a", "b"), ("c",)

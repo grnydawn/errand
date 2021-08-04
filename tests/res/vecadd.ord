@@ -10,8 +10,19 @@
 
 [cuda: -O3 @ compiler="nvcc"]
 
+    printf("\n**** 1");
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if(id < a->size) c->data[id] = a->data[id] + b->data[id];
+    printf("\n**** 2");
+	//printf("\n  ## %d, %d, %f", id, a.size, a.data[0]);
+	//printf("\n  ## %d, %d", id, a.size);
+	//a.size = 10;
+    if(id < 3) {
+		//printf("\n  ## %f", a.data[id]);
+		//printf("\n  ## %p, %f", a, a[id]);
+		c[id] = a[id] + b[id];
+		printf("\nVal at %d = %f", id, c[id]);
+	}
+    printf("\n**** 3");
 
 [hip]
 

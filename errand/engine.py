@@ -14,6 +14,8 @@ class Engine(abc.ABC):
 
     def __init__(self, workdir):
         self.workdir = workdir
+        self.kernel = None
+        self.argmap = {}
 
     @abc.abstractmethod
     def gencode(self, nteams, nmembers, inargs, outargs, order):
