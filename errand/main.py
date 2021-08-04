@@ -15,17 +15,20 @@ class Errand(object):
 * manage temporary directory
 * initialze errand activities
 * finalize errand activities
+  - wait for errand to finish
+  - collect output
 """
 
     def __init__(self, order, engine=None, errand=None):
 
         self.order = Order(order)
-        self.engine = select_engine(engine, self.order)
+        self.engine = engine
         self.errand = errand
         
     def __enter__(self):
 
         self.tempdir = tempfile.mkdtemp()
+        self.engine = select_engine(self.engine, self.order)(self.tempdir)
         self.context =  Context(self.order, self.engine, self.tempdir, self.errand)
 
         return self.context

@@ -6,83 +6,57 @@ Define Errand context
 
 import time
 
-from errand.eboys import EBoys
-from errand.data import ManagedData
+from errand.gofers import Gofers
+from errand.workshop import Workshop
 
-from numpy import ndarray
-
-# TODO: Context is reposible to provide a concept of Errand for use
 
 class Context(object):
     """Context class: provides consistent interface of Errand
 
-    * keep database
 """
 
     def __init__(self, order, engine, workdir, context):
 
-        self.egroups = {}
+        self.tasks = {}
 
         self.order = order # what eboys to do
         self.engine = engine # what eboys to use to complete the order
         self.workdir = workdir
-        self.within = context
+        self.context = context
 
-        # context should know all of current states
-
-    def call_eboys(self, num_eboys=None):
+    def gofers(self, num_gofers=None):
 
         # may have many optional arguments that hints
-        # to determin how many eboys to be called, or the group hierachy 
-        # for now, let's call only one eboy
+        # to determin how many gofers to be called, or the group hierachy 
+        # for now, let's call only one gofer
 
-        if num_eboys is None:
-            num_eboys = 1
+        if num_gofers is None:
+            num_gofers = 1
 
-        eboys = EBoys(num_eboys)
-        self.egroups[eboys] = {}
+        return Gofers(num_gofers)
 
-        return eboys
+    def workshop(self, *vargs, **kwargs):
 
-    def assign(self, eboys, *vargs, method=None):
-
-        for varg in vargs:
-            if not isinstance(varg, ManagedData):
-                varg = ManagedData(varg)
-
-            eboys.load(varg, assign_method=method)
-
-    def run(self, eboys):
-
-        # TODO: generate code
-        code = self.engine.gen_code(self.order, self.workdir)
-
-        # TODO: compile code
-        lib = self.engine.gen_sharedlib(code, self.workdir)
-
-        # TODO: assign it to eboys
-        eboys.run(lib)
-
-    def gather(self, eboys, data, *vargs, tolist=False):
-
-        out = []
-
-        out.append(self._gather(eboys, data))
+        inargs = []
+        outargs = None
 
         for varg in vargs:
-            out.append(self._gather(eboys, varg))
-            
-        return out if tolist or vargs else out[0]
+            if varg == "->":
+                outargs = []
 
-    def _gather(self, eboys, data):
-        pass
+            elif outargs is not None:
+                outargs.append(varg)
 
-    def dismiss(self, *vargs):
+            else:
+                inargs.append(varg)
 
-        for eboys in vargs:
-            eboys.dismiss()
+        ws = Workshop(inargs, outargs, **kwargs)
+
+        self.tasks[ws] = {}
+
+        return ws
 
     def shutdown(self):
 
-        for eboys, cfg in self.egroups.items():
-            self.dismiss(eboys)
+        for ws in self.tasks:
+            ws.shutdown()

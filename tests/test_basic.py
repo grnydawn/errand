@@ -32,20 +32,18 @@ def test_cuda():
         # context brings magic to user with coordination of eboys, order, and data with engine
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
-        # call errand boys with optional hierachical groups
-        eboys = erd.call_eboys()
+        # logical worker entities
+        gofers = erd.gofers()
 
-        # assign workload to eboys/groups/eboy
-        # may add reduce=method argument
-        erd.assign(eboys, a, b, c)
-        #erd.assign(eboys, a, b, c, reduce=erd.reduce.sum(c))
+        # workshop represents machine, input&output, order, and engine
+        workshop = erd.workshop(a, b, "->", c)
 
-        # go!~
-        erd.run(eboys)
-
-        # gather result of the task
-        erd.gather(eboys, c)
-        #reduced_c = erd.gather(eboys, c) if reduce is used
+        # generate source code, compile, and run
+        gofers.run(workshop)
  
+        # do whatever before gofers complete errand
+
+    # When context complets, it ensures that errand is completed
+
     assert c.sum() == a.sum() + b.sum()
     #assert reduced_c == a.sum() + b.sum()
