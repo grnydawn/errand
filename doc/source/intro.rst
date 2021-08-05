@@ -2,9 +2,8 @@
 Getting-started
 ===============
 
-errand makes use of programming tools that you are already familar with. For example, if you are familiar with CUDA programming, errand uses Nvidia CUDA compiler and manages data movements between GPU and CPU so that you can focus on computation in CUDA.
+**errand** makes use of conventional programming tools that you may be already familar with. For example, **errand** uses Nvidia CUDA compiler or AMD HIP compiler if needed. **errand** takes responsibilities of data movements between GPU and CPU so that you can focus on computation in CUDA or HIP.
 
--------------
 Installation
 -------------
 
@@ -19,7 +18,6 @@ You can install errand from github code repository if you want to try the latest
         >>> python setup.py install
 
 
--------------------------------------------------------
 Vector addition example in CUDA(Nvidia) or HIP(AMD)
 -------------------------------------------------------
 
