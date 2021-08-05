@@ -25,6 +25,8 @@ class Workshop(object):
 
     def open(self, nteams, nmembers):
 
+        self.start = time.time()
+
         # generate executable code
         self.code = self.engine.gencode(nteams, nmembers, self.inargs,
                         self.outargs, self.order)
@@ -33,11 +35,11 @@ class Workshop(object):
 
         return self.code.run()
 
-    def close(self):
+    def close(self, timeout=None):
 
-        start = time.time()
+        while self.code.isalive() == 0 and (timeout is None or
+            time.time()-self.start < float(timeout)):
 
-        while self.code.isalive() == 0 and time.time()-start < 3:
             time.sleep(0.1)
 
         self.engine.d2hcopy(self.outargs)
