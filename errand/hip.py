@@ -19,12 +19,13 @@ dtypemap = {
 }
 
 code_template = """
+#include <hip/hip_runtime.h>
 //#include <stdio.h>
 //#include <unistd.h>
 
 int isfinished = 0;
 
-//using namespace std;
+using namespace std;
 
 // TODO: prepare all possible type/dim combinations
 // dim: 0, 1,2,3,4,5
@@ -141,8 +142,8 @@ class HipEngine(Engine):
             dvci += "    h_%s = (double *) data;\n" % aname
             dvci += "    hipMalloc((void **)&d_%s.data, size * sizeof(double));\n" % aname
             dvci += "    hipMalloc((void **)&d_%s._size, sizeof(int));\n" % aname
-            dvci += "    hipMemcpy(d_%s.data, h_%s, size * sizeof(double), hipMemcpyHostToDevice);\n" % (aname, aname)
-            dvci += "    hipMemcpy(d_%s._size, &size, sizeof(int), hipMemcpyHostToDevice);\n" % aname
+            dvci += "    hipMemcpyHtoD(d_%s.data, h_%s, size * sizeof(double));\n" % (aname, aname)
+            dvci += "    hipMemcpyHtoD(d_%s._size, &size, sizeof(int));\n" % aname
             dvci += "}\n"
 
             dca.append("%s_dim%s %s" % (dtname, ndim, aname))
@@ -152,7 +153,7 @@ class HipEngine(Engine):
         dvco = ""
         for aname, (arg, attr) in zip(outnames, outargs):
             dvco += "extern \"C\" void d2hcopy_c(void * data, int size) {\n"
-            dvco += "    hipMemcpy(h_%s, d_%s.data, size * sizeof(double), hipMemcpyDeviceToHost);\n" % (aname, aname)
+            dvco += "    hipMemcpyDtoH(h_%s, d_%s.data, size * sizeof(double));\n" % (aname, aname)
             dvco += "    data = (void *) h_%s;\n" % aname
             dvco += "}\n"
 
@@ -174,10 +175,10 @@ class HipEngine(Engine):
 
         # generate shared library
         cmdopts = {"hipcc": self.compiler, "opts": opts, "path": codepath,
-                    "defaults": "--compiler-options '-fPIC' -o %s --shared" % outpath
+                    "defaults": "-fPIC -o %s --shared" % outpath
                 }
 
-        cmd = "{hpicc} {opts} {defaults} {path}".format(**cmdopts)
+        cmd = "{hipcc} {opts} {defaults} {path}".format(**cmdopts)
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
         if out.returncode  != 0:

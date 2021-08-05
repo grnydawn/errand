@@ -21,7 +21,7 @@ def test_cuda():
 
     # include attrs of workshop like engine, ncores, nthreads/core, memory, ...
     # hip or cuda engine
-    with Errand(esf, engine="cuda") as erd:
+    with Errand(esf, engine="hip") as erd:
 
         # hierachical settings: order -> context -> base
         # best-effort of guessing default settings
