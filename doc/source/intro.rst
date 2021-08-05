@@ -21,8 +21,9 @@ You can install errand from github code repository if you want to try the latest
 Vector addition example in CUDA(Nvidia) or HIP(AMD)
 -------------------------------------------------------
 
-After errand is installed, create two source files in a folder shown below. And run Python as usual.
-The example assumes that at least one of CUDA compiler (nvcc) or HIP compiler (hipcc) is usuable on your system.
+To run the example, create two source files in a folder shown below. And run Python as usual shown below.
+The example assumes that at least one of CUDA compiler (nvcc) or HIP compiler (hipcc) is usuable and 
+GPU is available on your system.
 
 ::
 
