@@ -13,7 +13,7 @@ def test_cuda():
     b = np.ones(N) * 2
     c = np.zeros(N)
 
-    esf = os.path.join(here, "res", "vecadd.ord")
+    order = os.path.join(here, "res", "vecadd.ord")
 
     # incorporate other models like kokkos and raja
     # kokkos: parallel_for and parallel_reduction, engine=execution space, numpy array = view
@@ -21,7 +21,7 @@ def test_cuda():
 
     # include attrs of workshop like engine, ncores, nthreads/core, memory, ...
     # hip or cuda engine
-    with Errand(esf, engine="hip") as erd:
+    with Errand(order, engine="hip") as erd:
 
         # hierachical settings: order -> context -> base
         # best-effort of guessing default settings

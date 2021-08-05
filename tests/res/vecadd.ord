@@ -1,7 +1,6 @@
-y = 1
-[signature: a, b -> c@tx=y]
-xxx
+[signature: x, y -> z]
+
 [cuda, hip]
 
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if(id < a.size()) c.data[id] = a.data[id] + b.data[id];
+    if(id < x.size()) z.data[id] = x.data[id] + y.data[id];

@@ -61,9 +61,6 @@ class Order(object):
                 for name, arg, attr, body in self._parse_section(buf):
                     sections[name] = (arg, attr, body)
 
-                #for secname, secargs, secattrs, secbody in self._parse_section(buf):
-                #    sections[secname] = (secargs, secattrs, secbody)
-                   
         return sections
 
     def _parse_section(self, lines):

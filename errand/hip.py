@@ -152,7 +152,7 @@ class HipEngine(Engine):
 
         dvco = ""
         for aname, (arg, attr) in zip(outnames, outargs):
-            dvco += "extern \"C\" void d2hcopy_c(void * data, int size) {\n"
+            dvco += "extern \"C\" void d2hcopy_%s(void * data, int size) {\n" % aname
             dvco += "    hipMemcpyDtoH(h_%s, d_%s.data, size * sizeof(double));\n" % (aname, aname)
             dvco += "    data = (void *) h_%s;\n" % aname
             dvco += "}\n"
