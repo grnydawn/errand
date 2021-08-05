@@ -14,6 +14,10 @@ from errand.engine import Engine
 from errand.util import which
 
 
+dtypemap = {
+    "float64": "double"
+}
+
 code_template = """
 #include <stdio.h>
 #include <unistd.h>
@@ -26,14 +30,7 @@ using namespace std;
 // dim: 0, 1,2,3,4,5
 // type: int, float, char, boolean
 
-struct DoubleDim1 {{
-    double * data;
-    int * _size;
-
-    __device__ int size() {{
-        return *_size;
-    }}
-}};
+{dvarstructs}
 
 {dvardefs}
 
@@ -106,26 +103,49 @@ class CudaEngine(Engine):
         assert len(innames) == len(inargs), "The number of input arguments mismatches."
         assert len(outnames) == len(outargs), "The number of input arguments mismatches."
 
+        dvs = {}
         dvd = ""        
         dvci = ""        
         dca = []
         hca = []
         for aname, (arg, attr) in zip(innames+outnames, inargs+outargs):
             self.argmap[id(arg)] = aname
+
+            dtname = dtypemap[arg.dtype.name]
+
+            if dtname in dvs:
+                dvsd = dvs[dtname]
+
+            else:
+                dvsd = {}
+                dvs[dtname] = dvsd
+                
+            ndim = str(arg.ndim)
+            if ndim not in dvsd:
+                dvsdn = ""
+
+                dvsdn += "struct %s_dim%s {\n" % (dtname, ndim)
+                dvsdn += "    %s * data;\n" % dtname
+                dvsdn += "    int * _size;\n"
+                dvsdn += "    __device__ int size() {;\n"
+                dvsdn += "        return * _size;\n"
+                dvsdn += "    }\n"
+                dvsdn += "};\n"
+
+                dvsd[ndim] = dvsdn
+
             dvd += "double * h_%s;\n" % aname
-            dvd += "int h_%s_size;\n" % aname
-            dvd += "__device__ DoubleDim1 d_%s;\n" % aname
+            dvd += "__device__ %s_dim%s d_%s;\n" % (dtname, ndim, aname)
 
             dvci += "extern \"C\" void h2dcopy_%s(void * data, int size) {\n" % aname
             dvci += "    h_%s = (double *) data;\n" % aname
-            dvci += "    h_%s_size = size;\n" % aname
             dvci += "    cudaMalloc((void **)&d_%s.data, size * sizeof(double));\n" % aname
             dvci += "    cudaMalloc((void **)&d_%s._size, sizeof(int));\n" % aname
             dvci += "    cudaMemcpy(d_%s.data, h_%s, size * sizeof(double), cudaMemcpyHostToDevice);\n" % (aname, aname)
-            dvci += "    cudaMemcpy(d_%s._size, &h_%s_size, sizeof(int), cudaMemcpyHostToDevice);\n" % (aname, aname)
+            dvci += "    cudaMemcpy(d_%s._size, &size, sizeof(int), cudaMemcpyHostToDevice);\n" % aname
             dvci += "}\n"
 
-            dca.append("DoubleDim1 %s" % aname)
+            dca.append("%s_dim%s %s" % (dtname, ndim, aname))
 
             hca.append("d_%s" % aname)
 
@@ -136,10 +156,11 @@ class CudaEngine(Engine):
             dvco += "    data = (void *) h_%s;\n" % aname
             dvco += "}\n"
 
+        dvs_str = "\n".join([y for x in dvs.values() for y in x.values()])
 
         code = code_template.format(dvardefs=dvd, dvarcopyins=dvci, dvarcopyouts=dvco,
             devcodebody=dcb, devcodeargs=", ".join(dca), hostcallargs=", ".join(hca),
-            ngrids=ng, nthreads=nt)
+            dvarstructs=dvs_str, ngrids=ng, nthreads=nt)
 
         codepath = os.path.join(self.workdir, "test.cu")
         with open(codepath, "w") as f:
