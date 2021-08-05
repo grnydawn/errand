@@ -21,7 +21,7 @@ You can install errand from github code repository if you want to try the latest
 Vector addition example in CUDA(Nvidia) or HIP(AMD)
 -------------------------------------------------------
 
-To run the example, create two source files in a folder shown below. And run Python as usual shown below.
+To run the example, create two source files in a folder as shown below, and run the Python script as usual.
 The example assumes that at least one of CUDA compiler (nvcc) or HIP compiler (hipcc) is usuable and 
 GPU is available on your system.
 
@@ -58,7 +58,7 @@ Python code (main.py)
 		assert c.sum() == a.sum() + b.sum()
 
 
-Order code(order.ord)
+Order code (order.ord)
 
 ::
 
