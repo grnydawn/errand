@@ -49,3 +49,81 @@ def which(pgm):
         p=os.path.join(p,pgm)
         if os.path.exists(p) and os.access(p,os.X_OK):
             return p
+
+def split_arguments(*vargs):
+
+    inargs = []
+    outargs = None
+
+    for varg in vargs:
+        if isinstance(varg, str) and varg == "->":
+            outargs = []
+
+        elif outargs is not None:
+            outargs.append(varg)
+
+        else:
+            inargs.append(varg)
+
+    if outargs is None:
+        outargs = []
+
+    return (inargs, outargs)
+
+
+def parse_literal_args(expr):
+
+    lv = []
+    lk = {}
+
+    expr_items = expr.split(",")
+    text = ""
+
+    while expr_items:
+
+        expr_item = expr_items.pop(0).strip()
+
+        if not expr_item:
+            continue
+
+        if text:
+            text = text + "," + expr_item
+
+        else:
+            text = expr_item
+
+        #if not text:
+        #    continue
+
+        try:
+            tree = ast.parse("func({0})".format(text))
+            args = tree.body[0].value.args
+            keywords = tree.body[0].value.keywords
+
+            if len(args) > 0 and len(keywords):
+                raise UsageError("Both of args and keywords are found"
+                                 " during argument parsing.")
+            text = text.strip()
+
+            if not text:
+                continue
+
+            if len(args) > 0:
+                lv.append(text)
+
+            elif len(keywords) > 0:
+                key, val = text.split("=", 1)
+
+                if val:
+                    lk[key] = val
+
+            text = ""
+
+        except Exception:
+            pass
+
+    #if not lv and not lk:
+    #    lv.append(expr)
+
+    return lv, lk
+

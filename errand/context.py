@@ -8,6 +8,7 @@ import time
 
 from errand.gofers import Gofers
 from errand.workshop import Workshop
+from errand.util import split_arguments
 
 
 class Context(object):
@@ -38,18 +39,7 @@ class Context(object):
 
     def workshop(self, *vargs, **kwargs):
 
-        inargs = []
-        outargs = None
-
-        for varg in vargs:
-            if varg == "->":
-                outargs = []
-
-            elif outargs is not None:
-                outargs.append(varg)
-
-            else:
-                inargs.append(varg)
+        inargs, outargs = split_arguments(*vargs)
 
         ws = Workshop(inargs, outargs, self.order, self.engine, self.workdir, **kwargs)
 
