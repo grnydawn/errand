@@ -61,34 +61,37 @@ extern "C" int run() {{
 
 class HipEngine(Engine):
 
-    name = "hip"
-
     def __init__(self, workdir):
 
         super(HipEngine, self).__init__(workdir)
 
         compiler = which("hipcc")
-        if compiler is None or not os.path.isfile(compiler):
+        if compiler is None or not self.isavail():
             raise Exception("hipcc is not found")
 
         self.compiler = os.path.realpath(compiler)
 
-        # TODO: compile and load runtime library wrapper per compiler
+    @classmethod
+    def isavail(cls):
 
-        self.rootdir = os.path.join(os.path.dirname(self.compiler), "..")
+        compiler = which("hipcc")
+        if compiler is None or not os.path.isfile(compiler):
+            return False
 
-        self.incdir = os.path.join(self.rootdir, "include")
-        if not os.path.isdir(self.incdir):
-            raise Exception("Can not find include directory")
+        rootdir = os.path.join(os.path.dirname(compiler), "..")
 
-        self.libdir = os.path.join(self.rootdir, "lib64")
-        if not os.path.isdir(self.libdir):
-            self.libdir = os.path.join(self.rootdir, "lib")
+        incdir = os.path.join(rootdir, "include")
+        if not os.path.isdir(incdir):
+            return False
 
-            if not os.path.isdir(self.libdir):
-                raise Exception("Can not find library directory")
+        libdir = os.path.join(rootdir, "lib64")
+        if not os.path.isdir(libdir):
+            libdir = os.path.join(rootdir, "lib")
 
-        #self.libhiprt = load_library("libhiprt", self.libdir)
+            if not os.path.isdir(libdir):
+                return False
+
+        return True
 
     def gencode(self, nteams, nmembers, inargs, outargs, order):
         

@@ -172,3 +172,17 @@ class Order(object):
                 inargs = [s.strip() for s in s1[0].split(",")]
 
         return (inargs, outargs)
+
+    def get_targetnames(self):
+
+        tnames = []
+
+        for secname in self.sections.keys():
+            if secname.startswith("_") or secname == "signature":
+                continue
+
+            tnames.append(secname)
+
+        return tnames
+
+
