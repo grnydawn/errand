@@ -23,8 +23,14 @@ You can install errand from github code repository if you want to try the latest
 Vector addition example in CUDA(Nvidia) or HIP(AMD)
 -------------------------------------------------------
 
+After errand is installed, create two source files in a folder shown below. And run Python as usual.
 
-Python code
+::
+
+	>>> python main.py
+
+
+Python code (main.py)
 
 ::
 
@@ -42,12 +48,13 @@ Python code
 			# call gofers
 			gofers = erd.gofers(N)
 
-			# build workshop with input and output where actual work is going to be done
+			# build workshop with input and output, where actual work takes place
 			workshop = erd.workshop(a, b, "->", c)
 
-			# let gofers do work
+			# let gofers do their work
 			gofers.run(workshop)
 
+		# check result
 		assert c.sum() == a.sum() + b.sum()
 
 
