@@ -23,7 +23,7 @@ class Errand(object):
 
         self.order = Order(order)
         self.engine = engine
-        self.errand = errand
+        self.errand = errand # to support hierachical errand
         
     def __enter__(self):
 

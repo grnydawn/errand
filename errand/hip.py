@@ -1,4 +1,4 @@
-"""Errand CUDA engine module
+"""Errand HIP engine module
 
 
 """
@@ -58,17 +58,17 @@ extern "C" int run() {{
 """
 
 
-class CudaEngine(Engine):
+class HipEngine(Engine):
 
-    name = "cuda"
+    name = "hip"
 
     def __init__(self, workdir):
 
-        super(CudaEngine, self).__init__(workdir)
+        super(HipEngine, self).__init__(workdir)
 
-        compiler = which("nvcc")
+        compiler = which("hipcc")
         if compiler is None or not os.path.isfile(compiler):
-            raise Exception("nvcc is not found")
+            raise Exception("hipcc is not found")
 
         self.compiler = os.path.realpath(compiler)
 
@@ -87,7 +87,7 @@ class CudaEngine(Engine):
             if not os.path.isdir(self.libdir):
                 raise Exception("Can not find library directory")
 
-        #self.libcudart = load_library("libcudart", self.libdir)
+        #self.libhiprt = load_library("libhiprt", self.libdir)
 
     def gencode(self, nteams, nmembers, inargs, outargs, order):
         
@@ -96,7 +96,7 @@ class CudaEngine(Engine):
         # {dvardefs} {dvarcopyins} {dvarcopyouts} {devcodebody} {ngrids} {nthreads}
         ng = str(nteams)
         nt = str(nmembers)
-        dcb = "\n".join(order.sections["cuda"][2])
+        dcb = "\n".join(order.sections["hip"][2])
 
         innames, outnames = order.get_argnames()
 
@@ -139,10 +139,10 @@ class CudaEngine(Engine):
 
             dvci += "extern \"C\" void h2dcopy_%s(void * data, int size) {\n" % aname
             dvci += "    h_%s = (double *) data;\n" % aname
-            dvci += "    cudaMalloc((void **)&d_%s.data, size * sizeof(double));\n" % aname
-            dvci += "    cudaMalloc((void **)&d_%s._size, sizeof(int));\n" % aname
-            dvci += "    cudaMemcpy(d_%s.data, h_%s, size * sizeof(double), cudaMemcpyHostToDevice);\n" % (aname, aname)
-            dvci += "    cudaMemcpy(d_%s._size, &size, sizeof(int), cudaMemcpyHostToDevice);\n" % aname
+            dvci += "    hipMalloc((void **)&d_%s.data, size * sizeof(double));\n" % aname
+            dvci += "    hipMalloc((void **)&d_%s._size, sizeof(int));\n" % aname
+            dvci += "    hipMemcpy(d_%s.data, h_%s, size * sizeof(double), hipMemcpyHostToDevice);\n" % (aname, aname)
+            dvci += "    hipMemcpy(d_%s._size, &size, sizeof(int), hipMemcpyHostToDevice);\n" % aname
             dvci += "}\n"
 
             dca.append("%s_dim%s %s" % (dtname, ndim, aname))
@@ -152,7 +152,7 @@ class CudaEngine(Engine):
         dvco = ""
         for aname, (arg, attr) in zip(outnames, outargs):
             dvco += "extern \"C\" void d2hcopy_c(void * data, int size) {\n"
-            dvco += "    cudaMemcpy(h_%s, d_%s.data, size * sizeof(double), cudaMemcpyDeviceToHost);\n" % (aname, aname)
+            dvco += "    hipMemcpy(h_%s, d_%s.data, size * sizeof(double), hipMemcpyDeviceToHost);\n" % (aname, aname)
             dvco += "    data = (void *) h_%s;\n" % aname
             dvco += "}\n"
 
@@ -173,11 +173,11 @@ class CudaEngine(Engine):
         outpath = os.path.join(self.workdir, "mylib.so")
 
         # generate shared library
-        cmdopts = {"nvcc": self.compiler, "opts": opts, "path": codepath,
+        cmdopts = {"hipcc": self.compiler, "opts": opts, "path": codepath,
                     "defaults": "--compiler-options '-fPIC' -o %s --shared" % outpath
                 }
 
-        cmd = "{nvcc} {opts} {defaults} {path}".format(**cmdopts)
+        cmd = "{hpicc} {opts} {defaults} {path}".format(**cmdopts)
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
         if out.returncode  != 0:
@@ -192,7 +192,7 @@ class CudaEngine(Engine):
 
         return self.kernel
 
-        # launch cuda program
+        # launch hip program
         #th = Thread(target=self.sharedlib.run)
         #th.start()
 
