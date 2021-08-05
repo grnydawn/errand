@@ -2,6 +2,9 @@
 
 """
 
+# TODO: supports eval, attributes in order
+# TODO: supports compiler hierachies with compiler wrappers
+
 import shutil, tempfile
 
 from errand.order import Order

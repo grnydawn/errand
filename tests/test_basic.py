@@ -5,7 +5,7 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-def test_cuda():
+def test_gpu():
 
     N = 100
 
