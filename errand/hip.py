@@ -13,8 +13,17 @@ from ctypes import c_double, c_size_t
 from errand.engine import Engine
 from errand.util import which
 
+# key ndarray attributes
+# shape, dtype, strides, itemsize, ndim, flags, size, nbytes
+# flat, ctypes, reshape
+
+# TODO: follow ndarray convention to copy data between CPU and GPU
+# TODO: send data and array of attributes to an internal variable of generated struct
+#       the attribute array will be interpreted within the struct to various info
 
 dtypemap = {
+    "int32": "int",
+    "int64": "long int",
     "float64": "double"
 }
 

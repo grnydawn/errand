@@ -1,0 +1,9 @@
+[signature: x, y -> z]
+
+[cuda, hip]
+
+    int i = blockIdx.x;
+    int j = threadIdx.x;
+
+    if(i < x.ndim(1) && j < x.ndim(2))
+		z.data[i][j] = x.data[i][j] + y.data[i][j];

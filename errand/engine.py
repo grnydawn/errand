@@ -57,4 +57,9 @@ def select_engine(engine, order):
             if tname in _installed_engines and _installed_engines[tname].isavail():
                 return _installed_engines[tname]
 
-    raise Exception("Engine-selection failed: %s" % str(engine))
+    if engine is None:
+        raise Exception("Engine-selection failed from the installed engines: %s"
+                % ", ".join(_installed_engines.keys()))
+
+    else:
+        raise Exception("Engine-selection failed: %s" % str(engine))

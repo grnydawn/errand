@@ -26,16 +26,17 @@ class Context(object):
         self.context = context
         self.output = []
 
-    def gofers(self, num_gofers=None):
+    def gofers(self, *vargs):
 
         # may have many optional arguments that hints
         # to determin how many gofers to be called, or the group hierachy 
-        # for now, let's call only one gofer
 
-        if num_gofers is None:
-            num_gofers = 1
+        if len(vargs) > 0:
+            return Gofers(*vargs)
 
-        return Gofers(num_gofers)
+        else:
+            return Gofers(1)
+
 
     def workshop(self, *vargs, **kwargs):
 

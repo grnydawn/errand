@@ -79,7 +79,7 @@ class Order(object):
             else:
                 clines.append(line)
 
-            pos = line.rfind(r"\\")
+            pos = clines[-1].rfind("\\")
 
             if pos >= 0:
                 clines[-1] = clines[-1][:pos]

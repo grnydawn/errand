@@ -5,7 +5,7 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-def test_gpu():
+def ttest_vecadd1d():
 
     N = 100
 
@@ -48,3 +48,29 @@ def test_gpu():
 
     assert c.sum() == a.sum() + b.sum()
     #assert reduced_c == a.sum() + b.sum()
+
+def test_vecadd2d():
+
+    N1, N2 = 2, 3
+
+#    a = np.ones((N1, N2))
+#    b = np.ones((N1, N2)) * 2
+#    c = np.zeros((N1, N2))
+
+
+    a = np.arange(N1*N2).reshape(N1, N2)
+    b = np.arange(N1*N2).reshape(N1, N2) * 2
+    c = np.zeros((N1, N2))
+
+    import pdb; pdb.set_trace()
+
+    order = os.path.join(here, "res", "matadd.ord")
+
+    with Errand(order) as erd:
+        gofers = erd.gofers(N1, N2)
+
+        workshop = erd.workshop(a, b, "->", c)
+
+        gofers.run(workshop)
+
+    assert c.sum() == a.sum() + b.sum()
