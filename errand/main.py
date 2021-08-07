@@ -7,37 +7,35 @@
 
 import shutil, tempfile
 
-from errand.order import Order
 from errand.context import Context
-from errand.engine import select_engine
 
 
 class Errand(object):
     """Errand class
 
-* manage temporary directory
-* initialze errand activities
-* finalize errand activities
-  - wait for errand to finish
-  - collect output
+* Out of context, OS-related tasks here
 """
 
-    def __init__(self, order, engine=None, errand=None):
+    def __init__(self, order, **kwargs):
 
-        self.order = Order(order)
-        self.engine = engine
-        self.errand = errand # to support hierachical errand
-        
+        self.order = order
+        self.kwargs = kwargs
+ 
+        self.tempdir = None
+        self.context = None
+      
     def __enter__(self):
 
         self.tempdir = tempfile.mkdtemp()
-        self.engine = select_engine(self.engine, self.order)(self.tempdir)
-        self.context =  Context(self.order, self.engine, self.tempdir, self.errand)
+        self.context =  Context(self.order, self.tempdir, **self.kwargs)
 
         return self.context
 
     def __exit__(self, exc_type, exc_val, exc_tb):
 
-        self.context.shutdown()
-        shutil.rmtree(self.tempdir)
+        if self.context:
+            self.context.shutdown()
+
+        if self.tempdir:
+            shutil.rmtree(self.tempdir)
 

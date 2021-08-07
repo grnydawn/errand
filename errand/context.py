@@ -6,8 +6,11 @@ Define Errand context
 
 import time
 
+from errand.order import Order
+from errand.engine import select_engine
 from errand.gofers import Gofers
 from errand.workshop import Workshop
+
 from errand.util import split_arguments
 
 
@@ -16,15 +19,17 @@ class Context(object):
 
 """
 
-    def __init__(self, order, engine, workdir, context):
+    def __init__(self, order, workdir, engine=None, context=None, timeout=None):
 
         self.tasks = {}
-
-        self.order = order
-        self.engine = engine
-        self.workdir = workdir
-        self.context = context
         self.output = []
+
+        self.order = order if isinstance(order, Order) else Order(order)
+        self.workdir = workdir
+        self.engine = select_engine(engine, self.order)(workdir)
+        self.context = context
+        self.timeout = timeout
+
 
     def gofers(self, *vargs):
 
@@ -51,4 +56,4 @@ class Context(object):
     def shutdown(self):
 
         for ws in self.tasks:
-            self.output.append(ws.close())
+            self.output.append(ws.close(timeout=self.timeout))

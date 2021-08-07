@@ -5,7 +5,7 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-def ttest_vecadd1d():
+def test_vecadd1d():
 
     N = 100
 
@@ -22,7 +22,7 @@ def ttest_vecadd1d():
     # include attrs of workshop like engine, ncores, nthreads/core, memory, ...
     # hip or cuda engine
     #with Errand(order, engine="hip") as erd:
-    with Errand(order) as erd:
+    with Errand(order, timeout=10) as erd:
 
         # hierachical settings: order -> context -> base
         # best-effort of guessing default settings
@@ -49,7 +49,7 @@ def ttest_vecadd1d():
     assert c.sum() == a.sum() + b.sum()
     #assert reduced_c == a.sum() + b.sum()
 
-def test_vecadd2d():
+def ttest_vecadd2d():
 
     N1, N2 = 2, 3
 

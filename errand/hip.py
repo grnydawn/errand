@@ -7,8 +7,7 @@ import os, sys, abc
 import subprocess as subp
 
 from numpy import double
-from numpy.ctypeslib import load_library, ndpointer
-from ctypes import c_double, c_size_t
+from numpy.ctypeslib import load_library
 
 from errand.engine import Engine
 from errand.util import which
@@ -69,6 +68,8 @@ extern "C" int run() {{
 
 
 class HipEngine(Engine):
+
+    name = "hip"
 
     def __init__(self, workdir):
 
@@ -150,12 +151,13 @@ class HipEngine(Engine):
             dvd += "double * h_%s;\n" % aname
             dvd += "__device__ %s_dim%s d_%s;\n" % (dtname, ndim, aname)
 
-            dvci += "extern \"C\" void h2dcopy_%s(void * data, int size) {\n" % aname
+            dvci += "extern \"C\" int %s(void * data, int size) {\n" % self.getname_h2dcopy(arg)
             dvci += "    h_%s = (double *) data;\n" % aname
             dvci += "    hipMalloc((void **)&d_%s.data, size * sizeof(double));\n" % aname
             dvci += "    hipMalloc((void **)&d_%s._size, sizeof(int));\n" % aname
             dvci += "    hipMemcpyHtoD(d_%s.data, h_%s, size * sizeof(double));\n" % (aname, aname)
             dvci += "    hipMemcpyHtoD(d_%s._size, &size, sizeof(int));\n" % aname
+            dvci += "    return 0;\n"
             dvci += "}\n"
 
             dca.append("%s_dim%s %s" % (dtname, ndim, aname))
@@ -164,9 +166,10 @@ class HipEngine(Engine):
 
         dvco = ""
         for aname, (arg, attr) in zip(outnames, outargs):
-            dvco += "extern \"C\" void d2hcopy_%s(void * data, int size) {\n" % aname
+            dvco += "extern \"C\" int %s(void * data, int size) {\n" % self.getname_d2hcopy(arg)
             dvco += "    hipMemcpyDtoH(h_%s, d_%s.data, size * sizeof(double));\n" % (aname, aname)
             dvco += "    data = (void *) h_%s;\n" % aname
+            dvco += "    return 0;\n"
             dvco += "}\n"
 
         dvs_str = "\n".join([y for x in dvs.values() for y in x.values()])
@@ -179,7 +182,7 @@ class HipEngine(Engine):
         with open(codepath, "w") as f:
             f.write(code)
 
-        #import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         # compile
         opts = ""
 
@@ -207,28 +210,3 @@ class HipEngine(Engine):
 
         # launch hip program
         #th = Thread(target=self.sharedlib.run)
-        #th.start()
-
-
-
-    def h2dcopy(self, inargs, outargs):
-
-        for arg, attr in inargs+outargs:
-            #np.ascontiguousarray(x, dtype=np.float32)
-            name = self.argmap[id(arg)]
-            h2dcopy = getattr(self.kernel, "h2dcopy_%s" % name)
-            h2dcopy.restype = None
-            h2dcopy.argtypes = [ndpointer(c_double), c_size_t]
-
-            h2dcopy(arg, arg.size)
-
-    def d2hcopy(self, outargs):
-
-        for arg, attr in outargs:
-            name = self.argmap[id(arg)]
-            d2hcopy = getattr(self.kernel, "d2hcopy_%s" % name)
-            d2hcopy.restype = None
-            d2hcopy.argtypes = [ndpointer(c_double), c_size_t]
-
-            d2hcopy(arg, arg.size)
-

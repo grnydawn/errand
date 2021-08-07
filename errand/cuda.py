@@ -60,6 +60,8 @@ extern "C" int run() {{
 
 class CudaEngine(Engine):
 
+    name = "cuda"
+
     def __init__(self, workdir):
 
         super(CudaEngine, self).__init__(workdir)
@@ -198,27 +200,3 @@ class CudaEngine(Engine):
         # launch cuda program
         #th = Thread(target=self.sharedlib.run)
         #th.start()
-
-
-
-    def h2dcopy(self, inargs, outargs):
-
-        for arg, attr in inargs+outargs:
-            #np.ascontiguousarray(x, dtype=np.float32)
-            name = self.argmap[id(arg)]
-            h2dcopy = getattr(self.kernel, "h2dcopy_%s" % name)
-            h2dcopy.restype = None
-            h2dcopy.argtypes = [ndpointer(c_double), c_size_t]
-
-            h2dcopy(arg, arg.size)
-
-    def d2hcopy(self, outargs):
-
-        for arg, attr in outargs:
-            name = self.argmap[id(arg)]
-            d2hcopy = getattr(self.kernel, "d2hcopy_%s" % name)
-            d2hcopy.restype = None
-            d2hcopy.argtypes = [ndpointer(c_double), c_size_t]
-
-            d2hcopy(arg, arg.size)
-

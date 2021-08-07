@@ -35,6 +35,7 @@ class Workshop(object):
 
         return self.code.run()
 
+    # assumes that code.run() is async
     def close(self, timeout=None):
 
         while self.code.isalive() == 0 and (timeout is None or
