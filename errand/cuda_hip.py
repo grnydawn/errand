@@ -1,4 +1,4 @@
-"""Errand HIP engine module
+"""Errand Cuda and Hip engine module
 
 
 """
@@ -65,8 +65,6 @@ extern "C" int run() {{
 class HipEngine(Engine):
 
     name = "hip"
-    codeext = "hip.cpp"
-    libext = "so"
 
     def __init__(self, workdir):
 
@@ -100,19 +98,7 @@ class HipEngine(Engine):
 
         return True
 
-    def code_devfunc(self):
-        return ""
-
-    def code_calldevmain(self):
-        return ""
-
-    def compiler_path(self):
-        return self.compiler
-
-    def compiler_option(self):
-        return "-fPIC --shared"
-
-    def ggencode(self, nteams, nmembers, inargs, outargs, order):
+    def gencode(self, nteams, nmembers, inargs, outargs, order):
         
         # generate source code
 
@@ -199,7 +185,7 @@ class HipEngine(Engine):
 
         # generate shared library
         cmdopts = {"hipcc": self.compiler, "opts": opts, "path": codepath,
-                    "defaults": "" % outpath
+                    "defaults": "-fPIC -o %s --shared" % outpath
                 }
 
         cmd = "{hipcc} {opts} {defaults} {path}".format(**cmdopts)
