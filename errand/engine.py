@@ -186,7 +186,7 @@ extern "C" int run() {{
 
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         if out.returncode  != 0:
             print(out.stderr)
             sys.exit(out.returncode)
@@ -237,8 +237,7 @@ extern "C" int run() {{
 def select_engine(engine, order):
 
     if not _installed_engines:
-        from errand.cuda import CudaEngine
-        from errand.hip import HipEngine
+        from errand.cuda_hip import CudaEngine, HipEngine
 
         _installed_engines[CudaEngine.name] = CudaEngine
         _installed_engines[HipEngine.name] = HipEngine
