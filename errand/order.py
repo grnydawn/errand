@@ -186,3 +186,7 @@ class Order(object):
         return tnames
 
 
+    def get_section(self, name):
+
+        # TODO: selective section
+        return self.sections[name]

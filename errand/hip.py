@@ -13,7 +13,7 @@ from errand.engine import Engine
 from errand.util import which
 
 # key ndarray attributes
-# shape, dtype, strides, itemsize, ndim, flags, size, nbytes
+# shape, dtype, strides, itemsize, ndims, flags, size, nbytes
 # flat, ctypes, reshape
 
 # TODO: follow ndarray convention to copy data between CPU and GPU
@@ -21,46 +21,50 @@ from errand.util import which
 #       the attribute array will be interpreted within the struct to various info
 
 
-code_template = """
-#include <hip/hip_runtime.h>
-//#include <stdio.h>
-//#include <unistd.h>
+varclass_template = """
+class {dtype}_dim{ndims} {{
+public:
+    {dtype} * data;
+    int * _size;
+    __device__ int size() {{
+        return * _size;
+    }}
+}};
+"""
 
-int isfinished = 0;
+vardef_template = """
+{dtype} * h_{arg};
+__device__ {dtype}_dim{ndims} d_{arg};
+"""
 
-using namespace std;
-
-// TODO: prepare all possible type/dim combinations
-// dim: 0, 1,2,3,4,5
-// type: int, float, char, boolean
-
-{dvarstructs}
-
-{dvardefs}
-
-{dvarcopyins}
-
-{dvarcopyouts}
-
-__global__ void _kernel({devcodeargs}){{
-    {devcodebody}
-}}
-
-extern "C" int isalive() {{
-
-    return isfinished;
-}}
-
-extern "C" int run() {{
-
-    _kernel<<<{ngrids}, {nthreads}>>>({hostcallargs}); 
-
-    isfinished = 1;
-
+h2dcopy_template = """
+extern "C" int h2dcopy_{arg}(void * data, int size) {{
+    h_{arg} = ({dtype} *) data;
+    hipMalloc((void **)&d_{arg}.data, size * sizeof({dtype}));
+    hipMalloc((void **)&d_{arg}._size, sizeof(int));
+    hipMemcpyHtoD(d_{arg}.data, h_{arg}, size * sizeof({dtype}));
+    hipMemcpyHtoD(d_{arg}._size, &size, sizeof(int));
     return 0;
 }}
 """
 
+d2hcopy_template = """
+extern "C" int d2hcopy_{arg}(void * data, int size) {{
+    hipMemcpyDtoH(h_{arg}, d_{arg}.data, size * sizeof({dtype}));
+    data = (void *) h_{arg};
+    return 0;
+}}
+"""
+
+devfunc_template = """
+__global__ void _kernel({args}){{
+    {body}
+}}
+"""
+
+calldevmain_template = """
+    _kernel<<<{ngrids}, {nthreads}>>>({args});
+"""
 
 class HipEngine(Engine):
 
@@ -77,6 +81,7 @@ class HipEngine(Engine):
             raise Exception("hipcc is not found")
 
         self.compiler = os.path.realpath(compiler)
+        self.option = ""
 
     @classmethod
     def isavail(cls):
@@ -100,17 +105,96 @@ class HipEngine(Engine):
 
         return True
 
+    def code_header(self):
+
+        return "#include <hip/hip_runtime.h>"
+
+    def code_varclass(self):
+
+        dvs = {}
+
+        for arg, attr in self.inargs+self.outargs:
+
+            aname, ndims, dname = self.getname_argtriple(arg)
+
+            if dname in dvs:
+                dvsd = dvs[dname]
+
+            else:
+                dvsd = {}
+                dvs[dname] = dvsd
+                
+            if ndims not in dvsd:
+                dvsd[ndims] = varclass_template.format(dtype=dname, ndims=ndims)
+
+        return "\n".join([y for x in dvs.values() for y in x.values()])
+
+    def code_vardef(self):
+
+        out = ""
+
+        for arg, attr in self.inargs+self.outargs:
+
+            aname, ndims, dname = self.getname_argtriple(arg)
+
+            out += vardef_template.format(arg=aname, ndims=ndims, dtype=dname)
+
+        return out
+
     def code_devfunc(self):
-        return ""
+
+        args = []
+        body = "\n".join(self.order.get_section("hip")[2])
+
+        for arg, attr in self.inargs+self.outargs:
+
+            aname, ndims, dname = self.getname_argtriple(arg)
+
+            args.append("%s_dim%s %s" % (dname, ndims, aname))
+
+        return devfunc_template.format(args=", ".join(args), body=body)
+
+    def code_h2dcopyfunc(self):
+
+        out = ""
+
+        for arg, attr in self.inargs+self.outargs:
+
+            aname, ndims, dname = self.getname_argtriple(arg)
+
+            out += h2dcopy_template.format(arg=aname, dtype=dname)
+
+        return out
+
+    def code_d2hcopyfunc(self):
+
+        out  = ""
+
+        for aname, (arg, attr) in zip(self.outnames, self.outargs):
+
+            aname, ndims, dname = self.getname_argtriple(arg)
+
+            out += d2hcopy_template.format(arg=aname, dtype=dname)
+
+        return out
 
     def code_calldevmain(self):
-        return ""
+
+        args = []
+
+        for aname, (arg, attr) in zip(self.innames+self.outnames,
+            self.inargs+self.outargs):
+
+            args.append("d_"+aname)
+
+        return calldevmain_template.format(ngrids=str(self.nteams),
+                nthreads=str(self.nmembers), args=", ".join(args))
 
     def compiler_path(self):
         return self.compiler
 
     def compiler_option(self):
-        return "-fPIC --shared"
+        return self.option + " -fPIC --shared"
 
     def ggencode(self, nteams, nmembers, inargs, outargs, order):
         
@@ -143,11 +227,11 @@ class HipEngine(Engine):
                 dvsd = {}
                 dvs[dtname] = dvsd
                 
-            ndim = str(arg.ndim)
-            if ndim not in dvsd:
+            ndims = str(arg.ndims)
+            if ndims not in dvsd:
                 dvsdn = ""
 
-                dvsdn += "struct %s_dim%s {\n" % (dtname, ndim)
+                dvsdn += "struct %s_dim%s {\n" % (dtname, ndims)
                 dvsdn += "    %s * data;\n" % dtname
                 dvsdn += "    int * _size;\n"
                 dvsdn += "    __device__ int size() {;\n"
@@ -155,10 +239,10 @@ class HipEngine(Engine):
                 dvsdn += "    }\n"
                 dvsdn += "};\n"
 
-                dvsd[ndim] = dvsdn
+                dvsd[ndims] = dvsdn
 
             dvd += "double * h_%s;\n" % aname
-            dvd += "__device__ %s_dim%s d_%s;\n" % (dtname, ndim, aname)
+            dvd += "__device__ %s_dim%s d_%s;\n" % (dtname, ndims, aname)
 
             dvci += "extern \"C\" int %s(void * data, int size) {\n" % self.getname_h2dcopy(arg)
             dvci += "    h_%s = (double *) data;\n" % aname
@@ -169,7 +253,7 @@ class HipEngine(Engine):
             dvci += "    return 0;\n"
             dvci += "}\n"
 
-            dca.append("%s_dim%s %s" % (dtname, ndim, aname))
+            dca.append("%s_dim%s %s" % (dtname, ndims, aname))
 
             hca.append("d_%s" % aname)
 

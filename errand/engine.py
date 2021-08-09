@@ -5,8 +5,9 @@
 
 import os, sys, abc, hashlib
 import subprocess as subp
+import numpy as np
 from numpy.ctypeslib import ndpointer, load_library
-from ctypes import c_int, c_double, c_size_t
+from ctypes import c_int, c_longlong, c_float, c_double, c_size_t
 
 
 _installed_engines = {}
@@ -23,7 +24,7 @@ class Engine(abc.ABC):
 
 {namespace}
 
-{varstruct}
+{varclass}
 
 int isfinished = 0;
 
@@ -56,9 +57,10 @@ extern "C" int run() {{
 """
 
     dtypemap = {
-        "int32": "int",
-        "int64": "long int",
-        "float64": "double"
+        "int32": ["int", c_int],
+        "int64": ["long", c_longlong],
+        "float32": ["float", c_float],
+        "float64": ["double", c_double]
     }
 
     def __init__(self, workdir):
@@ -86,7 +88,7 @@ extern "C" int run() {{
     def code_namespace(self):
         return ""
 
-    def code_varstruct(self):
+    def code_varclass(self):
         return ""
 
     def code_vardef(self):
@@ -119,11 +121,30 @@ extern "C" int run() {{
     def compiler_path(self):
         pass
 
+    def getname_argtriple(self, arg):
+        return (self.argmap[id(arg)], arg.ndim, self.getname_ctype(arg))
+
     @abc.abstractmethod
     def compiler_option(self):
         pass
 
+    def get_ctype(self, arg):
+       
+        return self.dtypemap[arg.dtype.name][1]
+
+    def getname_ctype(self, arg):
+       
+        return self.dtypemap[arg.dtype.name][0]
+ 
     def gencode(self, nteams, nmembers, inargs, outargs, order):
+
+        self.innames, self.outnames = order.get_argnames()
+
+        assert len(self.innames) == len(inargs), "The number of input arguments mismatches."
+        assert len(self.outnames) == len(outargs), "The number of input arguments mismatches."
+
+        for aname, (arg, attr) in zip(self.innames+self.outnames, inargs+outargs):
+            self.argmap[id(arg)] = aname
 
         self.nteams = nteams
         self.nmembers = nmembers
@@ -135,7 +156,7 @@ extern "C" int run() {{
         top = self.code_top()
         header = self.code_header()
         namespace = self.code_namespace()
-        varstruct = self.code_varstruct()
+        varclass = self.code_varclass()
         vardef = self.code_vardef()
         h2dcopyfunc = self.code_h2dcopyfunc()
         d2hcopyfunc = self.code_d2hcopyfunc()
@@ -146,7 +167,7 @@ extern "C" int run() {{
         tail = self.code_tail()
 
         code = self.code_template.format(top=top, header=header,
-            namespace=namespace, varstruct=varstruct, vardef=vardef,
+            namespace=namespace, varclass=varclass, vardef=vardef,
             h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
             devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
             postrun=postrun, tail=tail)
@@ -165,13 +186,13 @@ extern "C" int run() {{
 
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
+        import pdb; pdb.set_trace()
         if out.returncode  != 0:
             print(out.stderr)
             sys.exit(out.returncode)
 
         head, tail = os.path.split(libpath)
         base, ext = os.path.splitext(tail)
-        import pdb; pdb.set_trace()
 
         # load the library
         self.sharedlib = load_library(base, head)
@@ -234,7 +255,7 @@ def select_engine(engine, order):
                 return _installed_engines[tname]
 
     if engine is None:
-        raise Exception("None of the following installed engines are available: %s"
+        raise Exception("A compiler for any of these errand engines (%s) is not found on this system."
                 % ", ".join(_installed_engines.keys()))
 
     else:
