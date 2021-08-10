@@ -186,7 +186,7 @@ extern "C" int run() {{
 
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
-        #import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         if out.returncode  != 0:
             print(out.stderr)
             sys.exit(out.returncode)
@@ -201,37 +201,55 @@ extern "C" int run() {{
 
         #return the library 
         return self.sharedlib
-       
+        
+    @abc.abstractmethod
     def getname_h2dcopy(self, arg):
+        pass
+      
+    @abc.abstractmethod
+    def getname_h2dmalloc(self, arg):
+        pass
 
-        name = self.argmap[id(arg)]
-        return "h2dcopy_%s" % name
-
+    @abc.abstractmethod
     def getname_d2hcopy(self, arg):
+        pass
 
-        name = self.argmap[id(arg)]
-        return "d2hcopy_%s" % name
+    @abc.abstractmethod
+    def get_argattrs(self, arg):
+        pass
 
     def h2dcopy(self, inargs, outargs):
 
-        for arg, attr in inargs+outargs:
-            #np.ascontiguousarray(x, dtype=np.float32)
+        # shape, dtype, strides, itemsize, ndims, flags, size, nbytes flat, ctypes, reshape
+
+        for arg, attr in inargs:
+
+            attrs = self.get_argattrs(arg)
+            cattrs = c_int*len(attrs)
+
             h2dcopy = getattr(self.sharedlib, self.getname_h2dcopy(arg))
             h2dcopy.restype = c_int
-            #h2dcopy.argtypes = [ndpointer(c_double), c_size_t]
-            h2dcopy.argtypes = [ndpointer(self.get_ctype(arg)), c_size_t]
+            h2dcopy.argtypes = [ndpointer(self.get_ctype(arg)), cattrs] 
+            res = h2dcopy(np.ascontiguousarray(arg), cattrs(*attrs))
 
-            res = h2dcopy(arg, arg.size)
+        for arg, attr in outargs:
+
+            attrs = self.get_argattrs(arg)
+            cattrs = c_int*len(attrs)
+
+            h2dmalloc = getattr(self.sharedlib, self.getname_h2dmalloc(arg))
+            h2dmalloc.restype = c_int
+            h2dmalloc.argtypes = [ndpointer(self.get_ctype(arg)), cattrs]
+            res = h2dmalloc(np.ascontiguousarray(arg), cattrs(*attrs))
 
     def d2hcopy(self, outargs):
 
         for arg, attr in outargs:
             d2hcopy = getattr(self.sharedlib, self.getname_d2hcopy(arg))
             d2hcopy.restype = c_int
-            #d2hcopy.argtypes = [ndpointer(c_double), c_size_t]
-            d2hcopy.argtypes = [ndpointer(self.get_ctype(arg)), c_size_t]
+            d2hcopy.argtypes = [ndpointer(self.get_ctype(arg)), c_int]
 
-            res = d2hcopy(arg, arg.size)
+            res = d2hcopy(np.ascontiguousarray(arg), arg.size)
 
 
 def select_engine(engine, order):
