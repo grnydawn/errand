@@ -22,7 +22,7 @@ from errand.util import which
 
 
 varclass_template = """
-class {devhost}_{dtype}_dim{ndims} {{
+class {vartype} {{
 public:
     {dtype} * data;
     int * _attrs; // ndims, itemsize, size, strides
@@ -40,26 +40,26 @@ public:
 """
 
 host_vardef_template = """
-host_{dtype}_dim{ndims} h_{arg};
+{vartype} {varname};
 """
 
 dev_vardef_template = """
-__device__ dev_{dtype}_dim{ndims} d_{arg};
+__device__ {vartype} {varname};
 """
 
 #extern "C" int h2dcopy_{arg}(void * data, int size) {{
 hip_h2dcopy_template = """
 extern "C" int {name}(void * data, void * _attrs) {{
 
-    h_{arg}.data = ({dtype} *) data;
-    h_{arg}._attrs = (int *) _attrs;
-    int attrsize = 3 + h_{arg}.ndims(); // should match with get_argattrs
+    {hvar}.data = ({dtype} *) data;
+    {hvar}._attrs = (int *) _attrs;
+    int attrsize = 3 + {hvar}.ndims(); // should match with get_argattrs
 
-    hipMalloc((void **)&d_{arg}.data, h_{arg}.size() * sizeof({dtype}));
-    hipMalloc((void **)&d_{arg}._attrs, attrsize * sizeof(int));
+    hipMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    hipMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
 
-    hipMemcpyHtoD(d_{arg}.data, h_{arg}.data, h_{arg}.size() * sizeof({dtype}));
-    hipMemcpyHtoD(d_{arg}._attrs, h_{arg}._attrs, attrsize * sizeof(int));
+    hipMemcpyHtoD({dvar}.data, {hvar}.data, {hvar}.size() * sizeof({dtype}));
+    hipMemcpyHtoD({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int));
 
     return 0;
 }}
@@ -68,14 +68,14 @@ extern "C" int {name}(void * data, void * _attrs) {{
 hip_h2dmalloc_template = """
 extern "C" int {name}(void * data, void * _attrs) {{
 
-    h_{arg}.data = ({dtype} *) data;
-    h_{arg}._attrs = (int *) _attrs;
-    int attrsize = 3 + h_{arg}.ndims(); // should match with get_argattrs
+    {hvar}.data = ({dtype} *) data;
+    {hvar}._attrs = (int *) _attrs;
+    int attrsize = 3 + {hvar}.ndims(); // should match with get_argattrs
 
-    hipMalloc((void **)&d_{arg}.data, h_{arg}.size() * sizeof({dtype}));
-    hipMalloc((void **)&d_{arg}._attrs, attrsize * sizeof(int));
+    hipMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    hipMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
 
-    hipMemcpyHtoD(d_{arg}._attrs, h_{arg}._attrs, attrsize * sizeof(int));
+    hipMemcpyHtoD({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int));
 
     return 0;
 }}
@@ -84,9 +84,9 @@ extern "C" int {name}(void * data, void * _attrs) {{
 hip_d2hcopy_template = """
 extern "C" int {name}(void * data, int size) {{
 
-    hipMemcpyDtoH(h_{arg}.data, d_{arg}.data, size * sizeof({dtype}));
+    hipMemcpyDtoH({hvar}.data, {dvar}.data, size * sizeof({dtype}));
 
-    data = (void *) h_{arg}.data;
+    data = (void *) {hvar}.data;
 
     return 0;
 }}
@@ -152,6 +152,15 @@ class CudaHipEngine(Engine):
         name = self.argmap[id(arg)]
         return "d2hcopy_%s" % name
 
+    def getname_vartype(self, arg, devhost):
+
+        aname, ndims, dname = self.getname_argtriple(arg)
+        return "%s_%s_dim%s" % (devhost, dname, ndims)
+
+    def getname_var(self, arg, devhost):
+
+        return devhost + "_" + self.argmap[id(arg)]
+
     def get_argattrs(self, arg):
 
         return (arg.ndim, arg.itemsize, arg.size) + arg.strides
@@ -172,10 +181,15 @@ class CudaHipEngine(Engine):
                 dvs[dname] = dvsd
                 
             if ndims not in dvsd:
-                out = varclass_template.format(devhost="host", funcprefix="",
-                            dtype=dname, ndims=ndims)
-                out += varclass_template.format(devhost="dev",
-                            funcprefix="__device__", dtype=dname, ndims=ndims)
+
+                hvartype = self.getname_vartype(arg, "host")
+                out = varclass_template.format(vartype=hvartype,
+                        funcprefix="", dtype=dname)
+
+                dvartype = self.getname_vartype(arg, "dev")
+                out += varclass_template.format(vartype=dvartype,
+                        funcprefix="__device__", dtype=dname)
+
                 dvsd[ndims] = out
 
         return "\n".join([y for x in dvs.values() for y in x.values()])
@@ -188,8 +202,11 @@ class CudaHipEngine(Engine):
 
             aname, ndims, dname = self.getname_argtriple(arg)
 
-            out += host_vardef_template.format(arg=aname, ndims=ndims, dtype=dname)
-            out += dev_vardef_template.format(arg=aname, ndims=ndims, dtype=dname)
+            out += host_vardef_template.format(vartype=self.getname_vartype(arg,
+                    "host"), varname=self.getname_var(arg, "host"))
+
+            out += dev_vardef_template.format(vartype=self.getname_vartype(arg,
+                    "dev"), varname=self.getname_var(arg, "dev"))
 
         return out
 
@@ -216,7 +233,9 @@ class CudaHipEngine(Engine):
             fname = self.getname_h2dcopy(arg)
 
             template = self.get_template("h2dcopy")
-            out += template.format(name=fname, arg=aname, dtype=dname)
+            hvar = self.getname_var(arg, "host")
+            dvar = self.getname_var(arg, "dev")
+            out += template.format(hvar=hvar, dvar=dvar, name=fname, dtype=dname)
 
         for arg, attr in self.outargs:
 
@@ -224,7 +243,9 @@ class CudaHipEngine(Engine):
             fname = self.getname_h2dmalloc(arg)
 
             template = self.get_template("h2dmalloc")
-            out += template.format(name=fname, arg=aname, dtype=dname)
+            hvar = self.getname_var(arg, "host")
+            dvar = self.getname_var(arg, "dev")
+            out += template.format(hvar=hvar, dvar=dvar, name=fname, dtype=dname)
 
         return out
 
@@ -238,7 +259,9 @@ class CudaHipEngine(Engine):
             fname = self.getname_d2hcopy(arg)
 
             template = self.get_template("d2hcopy")
-            out += template.format(name=fname, arg=aname, dtype=dname)
+            hvar = self.getname_var(arg, "host")
+            dvar = self.getname_var(arg, "dev")
+            out += template.format(hvar=hvar, dvar=dvar, name=fname, dtype=dname)
 
         return out
 
@@ -249,7 +272,7 @@ class CudaHipEngine(Engine):
         for aname, (arg, attr) in zip(self.innames+self.outnames,
             self.inargs+self.outargs):
 
-            args.append("d_"+aname)
+            args.append(self.getname_var(arg, "dev"))
 
         return calldevmain_template.format(ngrids=str(self.nteams),
                 nthreads=str(self.nmembers), args=", ".join(args))
