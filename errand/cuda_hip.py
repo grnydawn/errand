@@ -93,30 +93,45 @@ extern "C" int {name}(void * data, int size) {{
 """
 
 cuda_h2dcopy_template = """
-extern "C" int {name}(void * data, int size) {{
-    h_{arg}.data = ({dtype} *) data;
-    cudaMalloc((void **)&d_{arg}.data, size * sizeof({dtype}));
-    cudaMalloc((void **)&d_{arg}._size, sizeof(int));
-    cudaMemcpy(d_{arg}.data, h_{arg}.data, size * sizeof({dtype}), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_{arg}._size, &size, sizeof(int), cudaMemcpyHostToDevice);
+extern "C" int {name}(void * data, void * _attrs) {{
+
+    {hvar}.data = ({dtype} *) data;
+    {hvar}._attrs = (int *) _attrs;
+    int attrsize = 3 + {hvar}.ndims(); // should match with get_argattrs
+
+    cudaMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    cudaMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
+
+    cudaMemcpy({dvar}.data, {hvar}.data, {hvar}.size() * sizeof({dtype}), cudaMemcpyHostToDevice);
+    cudaMemcpy({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int), cudaMemcpyHostToDevice);
+
     return 0;
 }}
 """
 
 cuda_h2dmalloc_template = """
-extern "C" int {name}(void * data, int size) {{
-    h_{arg}.data = ({dtype} *) data;
-    cudaMalloc((void **)&d_{arg}.data, size * sizeof({dtype}));
-    cudaMalloc((void **)&d_{arg}._size, sizeof(int));
-    cudaMemcpy(d_{arg}._size, &size, sizeof(int), cudaMemcpyHostToDevice);
+extern "C" int {name}(void * data, void * _attrs) {{
+
+    {hvar}.data = ({dtype} *) data;
+    {hvar}._attrs = (int *) _attrs;
+    int attrsize = 3 + {hvar}.ndims(); // should match with get_argattrs
+
+    cudaMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    cudaMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
+
+    cudaMemcpy({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int), cudaMemcpyHostToDevice);
+
     return 0;
 }}
 """
 
 cuda_d2hcopy_template = """
 extern "C" int {name}(void * data, int size) {{
-    cudaMemcpy(h_{arg}.data, d_{arg}.data, size * sizeof({dtype}), cudaMemcpyDeviceToHost);
-    data = (void *) h_{arg}.data;
+
+    cudaMemcpy({hvar}.data, {dvar}.data, size * sizeof({dtype}), cudaMemcpyDeviceToHost);
+
+    data = (void *) {hvar}.data;
+
     return 0;
 }}
 """
@@ -335,6 +350,7 @@ class CudaEngine(CudaHipEngine):
 
         elif name == "d2hcopy":
             return cuda_d2hcopy_template
+
 
 class HipEngine(CudaHipEngine):
 

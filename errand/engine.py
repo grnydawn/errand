@@ -186,7 +186,7 @@ extern "C" int run() {{
 
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         if out.returncode  != 0:
             print(out.stderr)
             sys.exit(out.returncode)
