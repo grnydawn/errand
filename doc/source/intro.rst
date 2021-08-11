@@ -18,7 +18,7 @@ You can install errand from github code repository if you want to try the latest
         >>> python setup.py install
 
 
-Numpy array example in CUDA(Nvidia) or HIP(AMD)
+NumPy array example in CUDA(Nvidia) or HIP(AMD)
 -------------------------------------------------------
 
 To run the example, create two source files in a folder as shown below, and run the Python script as usual.
@@ -44,7 +44,7 @@ Python code (main.py)
 	b = np.ones((N1, N2))
 	c = np.zeros((N1, N2))
 
-    # creates an errand context with an "order"
+	# creates an errand context with an "order"
 	with Errand("order.ord") as erd:
 
 		# call N1 teams of N2 gofers 
@@ -70,17 +70,20 @@ Order code (order.ord)
 
 ::
 
-	# the input and output variables are renamed
-	# from a, b, and c to x, y, and z
+	# the input and output variables can be renamed.
+	# For example, from a, b, and c to x, y, and z in this example.
 
 	[signature: x, y -> z]
 
 	[cuda, hip]
 
-		// N1 teams are interpreted to Cuca/Hip blocks
-		// N2 gofers are interpreted to Cuca/Hip threads
+		// N1 teams are interpreted to Cuda/Hip blocks
+		// N2 gofers of a team are interpreted to Cuda/Hip threads
+
 		int row = blockIdx.x;
 		int col = threadIdx.x;
 
 		// the input and output variables keep the convinience of numpy
-		z(row, col) = x(row, col) + y(row, col);
+
+		if (row < x.shape(0) && col < x.shape(1))
+			z(row, col) = x(row, col) + y(row, col);
