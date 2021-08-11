@@ -36,8 +36,8 @@ GPU is available on your system.
 
 Python code (main.py)
 
+::
 
-```python
 	import numpy as np
 	from errand import Errand
 
@@ -68,7 +68,6 @@ Python code (main.py)
 
 	else:
 		print("FAILURE!")
-```
 
 
 Order code (order.ord)
