@@ -11,4 +11,6 @@
 	int col = threadIdx.x;
 
 	// the input and output variables keep the convinience of numpy
-	z(row, col) = x(row, col) + y(row, col);
+
+	if (row < x.shape(0) && col < x.shape(1) )
+		z(row, col) = x(row, col) + y(row, col);
