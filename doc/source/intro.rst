@@ -33,6 +33,7 @@ GPU is available on your system.
 Python code (main.py)
 
 ::
+
 	# This example shows how to add numpy arrays
 	# using Errand with Cuda or Hip backend.
 
