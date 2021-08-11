@@ -6,13 +6,13 @@
     :Date: |today|
 
 ============================================================
-errand: Pythonic GPU and Accelerator Programming Framework
+errand: Pythonic GPU and Accelerator Interface
 ============================================================
 
 
-Welcome to the Pythonic GPU and Accelerator Programming Framework (errand).
+Welcome to Errand, the Pythonic GPU and Accelerator Interface.
 
-**errand** is a Python module that enables easy, flexible and futhre-proof programming framework for accelerator hardwares such as GPUs.
+**errand** is a Python module that enables an easy, scalable, and future-proof programming interface for accelerator hardwares such as GPUs.
 
 
 .. toctree::

@@ -39,14 +39,14 @@ Python code (main.py)
 
 		N = 100
 
-		a = np.ones(N)
-		b = np.ones(N) * 2
-		c = np.zeros(N)
+		a = np.ones((N, N))
+		b = np.ones((N, N)) * 2
+		c = np.zeros((N, N))
 
 		with Errand("order.ord") as erd:
 
 			# call gofers
-			gofers = erd.gofers(N)
+			gofers = erd.gofers(N, N)
 
 			# build workshop with input and output, where actual work takes place
 			workshop = erd.workshop(a, b, "->", c)
@@ -55,7 +55,11 @@ Python code (main.py)
 			gofers.run(workshop)
 
 		# check result
-		assert c.sum() == a.sum() + b.sum()
+		if np.array_equal(c, a+b):
+            print("SUCCESS!")
+
+        else:
+            print("FAILURE!")
 
 
 Order code (order.ord)
@@ -66,5 +70,7 @@ Order code (order.ord)
 
 		[cuda, hip]
 
-			int id = blockDim.x * blockIdx.x + threadIdx.x;
-			if(id < x.size()) z.data[id] = x.data[id] + y.data[id];
+            int row = blockIdx.x;
+            int col = threadIdx.x;
+
+            z(row, col) = x(row, col) + y(row, col);
