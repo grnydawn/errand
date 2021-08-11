@@ -3,20 +3,20 @@ from errand import Errand
 
 N = 100
 
-a = np.ones(N)
-b = np.ones(N) * 2
-c = np.zeros(N)
+a = np.ones((N, N))
+b = np.ones((N, N)) * 2
+c = np.zeros((N, N))
 
-with Errand("vecadd.ord") as erd:
+with Errand("vecadd2d.ord") as erd:
 
-        # call gofers
-        gofers = erd.gofers(N)
+    # call gofers
+    gofers = erd.gofers(N, N)
 
-        # build workshop with input and output, where actual work takes place
-        workshop = erd.workshop(a, b, "->", c)
+    # build workshop with input and output, where actual work takes place
+    workshop = erd.workshop(a, b, "->", c)
 
-        # let gofers do their work
-        gofers.run(workshop)
+    # let gofers do their work
+    gofers.run(workshop)
 
 # check result
-assert c.sum() == a.sum() + b.sum()
+assert np.array_equal(c, a+b)
