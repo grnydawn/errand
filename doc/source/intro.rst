@@ -54,12 +54,12 @@ Python code (main.py)
 			# let gofers do their work
 			gofers.run(workshop)
 
-		# check result
-		if np.array_equal(c, a+b):
-            print("SUCCESS!")
+            # check result
+            if np.array_equal(c, a+b):
+                print("SUCCESS!")
 
-        else:
-            print("FAILURE!")
+            else:
+                print("FAILURE!")
 
 
 Order code (order.ord)
