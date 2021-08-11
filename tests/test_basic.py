@@ -13,7 +13,7 @@ def test_vecadd1d():
     b = np.ones(N) * 2
     c = np.zeros(N)
 
-    order = os.path.join(here, "res", "vecadd.ord")
+    order = os.path.join(here, "res", "vecadd1d.ord")
 
     # incorporate other models like kokkos and raja
     # kokkos: parallel_for and parallel_reduction, engine=execution space, numpy array = view
@@ -49,7 +49,7 @@ def test_vecadd1d():
     assert c.sum() == a.sum() + b.sum()
     #assert reduced_c == a.sum() + b.sum()
 
-def test_matadd():
+def test_vecadd2d():
 
     N1, N2 = 2, 3
 
@@ -57,7 +57,7 @@ def test_matadd():
     b = np.arange(N1*N2).reshape(N1, N2)
     c = np.zeros((N1, N2), dtype=np.int64)
 
-    order = os.path.join(here, "res", "matadd.ord")
+    order = os.path.join(here, "res", "vecadd2d.ord")
 
     with Errand(order, timeout=5) as erd:
         gofers = erd.gofers(N1, N2)
