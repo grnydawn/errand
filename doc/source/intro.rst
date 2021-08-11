@@ -54,23 +54,23 @@ Python code (main.py)
 			# let gofers do their work
 			gofers.run(workshop)
 
-            # check result
-            if np.array_equal(c, a+b):
-                print("SUCCESS!")
+			# check result
+			if np.array_equal(c, a+b):
+				print("SUCCESS!")
 
-            else:
-                print("FAILURE!")
+            		else:
+				print("FAILURE!")
 
 
 Order code (order.ord)
 
 ::
 
-		[signature: x, y -> z]
+	[signature: x, y -> z]
 
-		[cuda, hip]
+	[cuda, hip]
 
-            int row = blockIdx.x;
-            int col = threadIdx.x;
+		int row = blockIdx.x;
+		int col = threadIdx.x;
 
-            z(row, col) = x(row, col) + y(row, col);
+		z(row, col) = x(row, col) + y(row, col);
