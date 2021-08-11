@@ -2,8 +2,7 @@
 
 [cuda, hip]
 
-    int i = blockIdx.x;
-    int j = threadIdx.x;
+    int row = blockIdx.x;
+    int col = threadIdx.x;
 
-    if(i < x.ndim(1) && j < x.ndim(2))
-		z.data[i][j] = x.data[i][j] + y.data[i][j];
+    z(row, col) = x(row, col) + y(row, col);

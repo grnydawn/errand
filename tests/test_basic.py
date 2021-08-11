@@ -5,7 +5,7 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-def test_vecadd1d():
+def ttest_vecadd1d():
 
     N = 100
 
@@ -49,28 +49,21 @@ def test_vecadd1d():
     assert c.sum() == a.sum() + b.sum()
     #assert reduced_c == a.sum() + b.sum()
 
-def ttest_vecadd2d():
+def test_matadd():
 
     N1, N2 = 2, 3
 
-#    a = np.ones((N1, N2))
-#    b = np.ones((N1, N2)) * 2
-#    c = np.zeros((N1, N2))
-
-
     a = np.arange(N1*N2).reshape(N1, N2)
-    b = np.arange(N1*N2).reshape(N1, N2) * 2
-    c = np.zeros((N1, N2))
-
-    import pdb; pdb.set_trace()
+    b = np.arange(N1*N2).reshape(N1, N2)
+    c = np.zeros((N1, N2), dtype=np.int64)
 
     order = os.path.join(here, "res", "matadd.ord")
 
-    with Errand(order) as erd:
+    with Errand(order, timeout=5) as erd:
         gofers = erd.gofers(N1, N2)
 
         workshop = erd.workshop(a, b, "->", c)
 
         gofers.run(workshop)
 
-    assert c.sum() == a.sum() + b.sum()
+    assert np.array_equal(c, a+b)

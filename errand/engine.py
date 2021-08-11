@@ -229,8 +229,8 @@ extern "C" int run() {{
 
             h2dcopy = getattr(self.sharedlib, self.getname_h2dcopy(arg))
             h2dcopy.restype = c_int
-            h2dcopy.argtypes = [ndpointer(self.get_ctype(arg)), cattrs] 
-            res = h2dcopy(np.ascontiguousarray(arg), cattrs(*attrs))
+            h2dcopy.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int] 
+            res = h2dcopy(arg, cattrs(*attrs), len(attrs))
 
         for arg, attr in outargs:
 
@@ -239,17 +239,17 @@ extern "C" int run() {{
 
             h2dmalloc = getattr(self.sharedlib, self.getname_h2dmalloc(arg))
             h2dmalloc.restype = c_int
-            h2dmalloc.argtypes = [ndpointer(self.get_ctype(arg)), cattrs]
-            res = h2dmalloc(np.ascontiguousarray(arg), cattrs(*attrs))
+            h2dmalloc.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int]
+            res = h2dmalloc(arg, cattrs(*attrs), len(attrs))
 
     def d2hcopy(self, outargs):
 
         for arg, attr in outargs:
             d2hcopy = getattr(self.sharedlib, self.getname_d2hcopy(arg))
             d2hcopy.restype = c_int
-            d2hcopy.argtypes = [ndpointer(self.get_ctype(arg)), c_int]
+            d2hcopy.argtypes = [ndpointer(self.get_ctype(arg))]
 
-            res = d2hcopy(np.ascontiguousarray(arg), arg.size)
+            res = d2hcopy(arg)
 
 
 def select_engine(engine, order):

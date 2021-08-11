@@ -13,7 +13,7 @@ from errand.engine import Engine
 from errand.util import which
 
 # key ndarray attributes
-# shape, dtype, strides, itemsize, ndims, flags, size, nbytes
+# shape, dtype, strides, itemsize, ndim, flags, size, nbytes
 # flat, ctypes, reshape
 
 # TODO: follow ndarray convention to copy data between CPU and GPU
@@ -22,88 +22,130 @@ from errand.util import which
 
 
 varclass_template = """
-class {dtype}_dim{ndims} {{
+class {vartype} {{
 public:
     {dtype} * data;
-    int * _attrs; // ndims, itemsize, shape
-    __device__ int size() {{
-        return {size};
+    int _attrs[{attrsize}]; // ndim, itemsize, size, shape, strides
+
+    {funcprefix} {dtype}& operator() ({oparg}) {{
+        int s = 3+_attrs[0];
+        return data[{offset}];
     }}
-    __device__ int ndims() {{
-        return _attrs[0];
-    }}
-    __device__ int size() {{
-        return _attrs[1];
+    {funcprefix} {dtype} operator() ({oparg}) const {{
+        int s = 3+_attrs[0];
+        //int * s = &(_attrs[3+_attrs[0]]);
+        return data[{offset}];
     }}
 
+    {funcprefix} int ndim() {{
+        return _attrs[0];
+    }}
+    {funcprefix} int itemsize() {{
+        return _attrs[1];
+    }}
+    {funcprefix} int size() {{
+        return _attrs[2];
+    }}
+    {funcprefix} int shape(int dim) {{
+        return _attrs[3+dim];
+    }}
+    {funcprefix} int stride(int dim) {{
+        return _attrs[3+_attrs[0]+dim];
+    }}
 }};
 """
 
-vardef_template = """
-{dtype} * h_{arg};
-__device__ {dtype}_dim{ndims} d_{arg};
+host_vardef_template = """
+{vartype} {varname};
+"""
+
+dev_vardef_template = """
+__device__ {vartype} {varname};
 """
 
 #extern "C" int h2dcopy_{arg}(void * data, int size) {{
 hip_h2dcopy_template = """
-extern "C" int {name}(void * data, void * _attrs) {{
-    int * attrs = (int *) _attrs;
-    h_{arg} = ({dtype} *) data;
-    //hipMalloc((void **)&d_{arg}.data, size * sizeof({dtype}));
-    hipMalloc((void **)&d_{arg}.data, (attrs[2]) * sizeof({dtype}));
-    //hipMalloc((void **)&d_{arg}._size, sizeof(int));
-    hipMalloc((void **)&d_{arg}._size, sizeof(int));
-    //hipMemcpyHtoD(d_{arg}.data, h_{arg}, size * sizeof({dtype}));
-    hipMemcpyHtoD(d_{arg}.data, h_{arg}, (attrs[2]) * sizeof({dtype}));
-    //hipMemcpyHtoD(d_{arg}._size, &size, sizeof(int));
-    hipMemcpyHtoD(d_{arg}._size, &(attrs[2]), sizeof(int));
+extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
+
+    {hvar}.data = ({dtype} *) data;
+    memcpy(&({hvar}._attrs[0]), _attrs, attrsize * sizeof(int));
+
+    hipMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    //hipMalloc((void **)&({dvar}._attrs[0]), attrsize * sizeof(int));
+
+    hipMemcpyHtoD({dvar}.data, {hvar}.data, {hvar}.size() * sizeof({dtype}));
+    hipMemcpyHtoD(&({dvar}._attrs[0]), &({hvar}._attrs[0]), attrsize * sizeof(int));
+
     return 0;
 }}
 """
 
 hip_h2dmalloc_template = """
-extern "C" int {name}(void * data, int size) {{
-    h_{arg} = ({dtype} *) data;
-    hipMalloc((void **)&d_{arg}.data, size * sizeof({dtype}));
-    hipMalloc((void **)&d_{arg}._size, sizeof(int));
-    hipMemcpyHtoD(d_{arg}._size, &size, sizeof(int));
+extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
+
+    {hvar}.data = ({dtype} *) data;
+    memcpy(&({hvar}._attrs[0]), _attrs, attrsize * sizeof(int));
+
+    hipMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    //hipMalloc((void **)&({dvar}._attrs[0]), attrsize * sizeof(int));
+
+    hipMemcpyHtoD(&({dvar}._attrs[0]), &({hvar}._attrs[0]), attrsize * sizeof(int));
+
     return 0;
 }}
 """
 
 hip_d2hcopy_template = """
-extern "C" int {name}(void * data, int size) {{
-    hipMemcpyDtoH(h_{arg}, d_{arg}.data, size * sizeof({dtype}));
-    data = (void *) h_{arg};
+extern "C" int {name}(void * data) {{
+
+    hipMemcpyDtoH({hvar}.data, {dvar}.data, {hvar}.size() * sizeof({dtype}));
+
+    data = (void *) {hvar}.data;
+
     return 0;
 }}
 """
 
 cuda_h2dcopy_template = """
-extern "C" int {name}(void * data, int size) {{
-    h_{arg} = ({dtype} *) data;
-    cudaMalloc((void **)&d_{arg}.data, size * sizeof({dtype}));
-    cudaMalloc((void **)&d_{arg}._size, sizeof(int));
-    cudaMemcpy(d_{arg}.data, h_{arg}, size * sizeof({dtype}), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_{arg}._size, &size, sizeof(int), cudaMemcpyHostToDevice);
+extern "C" int {name}(void * data, void * _attrs) {{
+
+    {hvar}.data = ({dtype} *) data;
+    {hvar}._attrs = (int *) _attrs;
+    int attrsize = 3 + {hvar}.ndim()*2; // should match with get_argattrs
+
+    cudaMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    cudaMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
+
+    cudaMemcpy({dvar}.data, {hvar}.data, {hvar}.size() * sizeof({dtype}), cudaMemcpyHostToDevice);
+    cudaMemcpy({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int), cudaMemcpyHostToDevice);
+
     return 0;
 }}
 """
 
 cuda_h2dmalloc_template = """
-extern "C" int {name}(void * data, int size) {{
-    h_{arg} = ({dtype} *) data;
-    cudaMalloc((void **)&d_{arg}.data, size * sizeof({dtype}));
-    cudaMalloc((void **)&d_{arg}._size, sizeof(int));
-    cudaMemcpy(d_{arg}._size, &size, sizeof(int), cudaMemcpyHostToDevice);
+extern "C" int {name}(void * data, void * _attrs) {{
+
+    {hvar}.data = ({dtype} *) data;
+    {hvar}._attrs = (int *) _attrs;
+    int attrsize = 3 + {hvar}.ndim()*2; // should match with get_argattrs
+
+    cudaMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    cudaMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
+
+    cudaMemcpy({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int), cudaMemcpyHostToDevice);
+
     return 0;
 }}
 """
 
 cuda_d2hcopy_template = """
 extern "C" int {name}(void * data, int size) {{
-    cudaMemcpy(h_{arg}, d_{arg}.data, size * sizeof({dtype}), cudaMemcpyDeviceToHost);
-    data = (void *) h_{arg};
+
+    cudaMemcpy({hvar}.data, {dvar}.data, size * sizeof({dtype}), cudaMemcpyDeviceToHost);
+
+    data = (void *) {hvar}.data;
+
     return 0;
 }}
 """
@@ -139,9 +181,23 @@ class CudaHipEngine(Engine):
         name = self.argmap[id(arg)]
         return "d2hcopy_%s" % name
 
+    def getname_vartype(self, arg, devhost):
+
+        aname, ndim, dname = self.getname_argtriple(arg)
+        return "%s_%s_dim%s" % (devhost, dname, ndim)
+
+    def getname_var(self, arg, devhost):
+
+        return devhost + "_" + self.argmap[id(arg)]
+
+    def len_argattrs(self, arg):
+
+        return 3 + len(arg.shape)*2
+
     def get_argattrs(self, arg):
 
-        return (arg.ndim, arg.itemsize) + arg.shape
+        return ((arg.ndim, arg.itemsize, arg.size) + arg.shape +
+                tuple([int(s//arg.itemsize) for s in arg.strides]))
 
     def code_varclass(self):
 
@@ -149,7 +205,7 @@ class CudaHipEngine(Engine):
 
         for arg, attr in self.inargs+self.outargs:
 
-            aname, ndims, dname = self.getname_argtriple(arg)
+            aname, ndim, dname = self.getname_argtriple(arg)
 
             if dname in dvs:
                 dvsd = dvs[dname]
@@ -158,8 +214,22 @@ class CudaHipEngine(Engine):
                 dvsd = {}
                 dvs[dname] = dvsd
                 
-            if ndims not in dvsd:
-                dvsd[ndims] = varclass_template.format(dtype=dname, ndims=ndims)
+            if ndim not in dvsd:
+                oparg = ", ".join(["int dim%d"%d for d in range(arg.ndim)])
+                offset = "+".join(["_attrs[s+%d]*dim%d"%(d,d) for d in range(arg.ndim)])
+                attrsize = self.len_argattrs(arg)
+
+                hvartype = self.getname_vartype(arg, "host")
+                out = varclass_template.format(vartype=hvartype, oparg=oparg,
+                        offset=offset, funcprefix="", dtype=dname,
+                        attrsize=attrsize)
+
+                dvartype = self.getname_vartype(arg, "dev")
+                out += varclass_template.format(vartype=dvartype, oparg=oparg,
+                        offset=offset, funcprefix="__device__", dtype=dname,
+                        attrsize = attrsize)
+
+                dvsd[ndim] = out
 
         return "\n".join([y for x in dvs.values() for y in x.values()])
 
@@ -169,9 +239,13 @@ class CudaHipEngine(Engine):
 
         for arg, attr in self.inargs+self.outargs:
 
-            aname, ndims, dname = self.getname_argtriple(arg)
+            aname, ndim, dname = self.getname_argtriple(arg)
 
-            out += vardef_template.format(arg=aname, ndims=ndims, dtype=dname)
+            out += host_vardef_template.format(vartype=self.getname_vartype(arg,
+                    "host"), varname=self.getname_var(arg, "host"))
+
+            out += dev_vardef_template.format(vartype=self.getname_vartype(arg,
+                    "dev"), varname=self.getname_var(arg, "dev"))
 
         return out
 
@@ -182,9 +256,9 @@ class CudaHipEngine(Engine):
 
         for arg, attr in self.inargs+self.outargs:
 
-            aname, ndims, dname = self.getname_argtriple(arg)
+            aname, ndim, dname = self.getname_argtriple(arg)
 
-            args.append("%s_dim%s %s" % (dname, ndims, aname))
+            args.append("dev_%s_dim%s %s" % (dname, ndim, aname))
 
         return devfunc_template.format(args=", ".join(args), body=body)
 
@@ -194,19 +268,23 @@ class CudaHipEngine(Engine):
 
         for arg, attr in self.inargs:
 
-            aname, ndims, dname = self.getname_argtriple(arg)
+            aname, ndim, dname = self.getname_argtriple(arg)
             fname = self.getname_h2dcopy(arg)
 
             template = self.get_template("h2dcopy")
-            out += template.format(name=fname, arg=aname, dtype=dname)
+            hvar = self.getname_var(arg, "host")
+            dvar = self.getname_var(arg, "dev")
+            out += template.format(hvar=hvar, dvar=dvar, name=fname, dtype=dname)
 
         for arg, attr in self.outargs:
 
-            aname, ndims, dname = self.getname_argtriple(arg)
+            aname, ndim, dname = self.getname_argtriple(arg)
             fname = self.getname_h2dmalloc(arg)
 
             template = self.get_template("h2dmalloc")
-            out += template.format(name=fname, arg=aname, dtype=dname)
+            hvar = self.getname_var(arg, "host")
+            dvar = self.getname_var(arg, "dev")
+            out += template.format(hvar=hvar, dvar=dvar, name=fname, dtype=dname)
 
         return out
 
@@ -216,11 +294,13 @@ class CudaHipEngine(Engine):
 
         for aname, (arg, attr) in zip(self.outnames, self.outargs):
 
-            aname, ndims, dname = self.getname_argtriple(arg)
+            aname, ndim, dname = self.getname_argtriple(arg)
             fname = self.getname_d2hcopy(arg)
 
             template = self.get_template("d2hcopy")
-            out += template.format(name=fname, arg=aname, dtype=dname)
+            hvar = self.getname_var(arg, "host")
+            dvar = self.getname_var(arg, "dev")
+            out += template.format(hvar=hvar, dvar=dvar, name=fname, dtype=dname)
 
         return out
 
@@ -231,7 +311,7 @@ class CudaHipEngine(Engine):
         for aname, (arg, attr) in zip(self.innames+self.outnames,
             self.inargs+self.outargs):
 
-            args.append("d_"+aname)
+            args.append(self.getname_var(arg, "dev"))
 
         return calldevmain_template.format(ngrids=str(self.nteams),
                 nthreads=str(self.nmembers), args=", ".join(args))
@@ -260,8 +340,6 @@ class CudaEngine(CudaHipEngine):
     def compiler_option(self):
         return self.option + "--compiler-options '-fPIC' --shared"
 
-
-
     @classmethod
     def isavail(cls):
 
@@ -284,6 +362,10 @@ class CudaEngine(CudaHipEngine):
 
         return True
 
+    def code_header(self):
+
+        return  "#include <stdexcept>"
+
     def get_template(self, name):
 
         if name == "h2dcopy":
@@ -294,6 +376,7 @@ class CudaEngine(CudaHipEngine):
 
         elif name == "d2hcopy":
             return cuda_d2hcopy_template
+
 
 class HipEngine(CudaHipEngine):
 
@@ -313,7 +396,7 @@ class HipEngine(CudaHipEngine):
         self.option = ""
 
     def compiler_option(self):
-        return self.option + " -fPIC --shared"
+        return self.option + " -fPIC --shared -O0"
 
     @classmethod
     def isavail(cls):
@@ -339,7 +422,10 @@ class HipEngine(CudaHipEngine):
 
     def code_header(self):
 
-        return "#include <hip/hip_runtime.h>"
+        out = """#include <stdexcept>
+#include <hip/hip_runtime.h>"""
+
+        return out
 
     def get_template(self, name):
 

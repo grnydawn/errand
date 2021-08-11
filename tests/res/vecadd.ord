@@ -3,4 +3,4 @@
 [cuda, hip]
 
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if(id < x.size()) z.data[id] = x.data[id] + y.data[id];
+    if(id < x->size()) (*z)(id) = (*x)(id) + (*y)(id);

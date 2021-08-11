@@ -81,7 +81,7 @@ class Order(object):
 
             pos = clines[-1].rfind("\\")
 
-            if pos >= 0:
+            if pos >= 0 and not clines[-1][pos+1:].strip():
                 clines[-1] = clines[-1][:pos]
                 C = True
 
