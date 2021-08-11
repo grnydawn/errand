@@ -147,50 +147,6 @@ extern "C" int {name}(void * data) {{
     return 0;
 }}
 """
-#
-#cuda_h2dcopy_template = """
-#extern "C" int {name}(void * data, void * _attrs) {{
-#
-#    {hvar}.data = ({dtype} *) data;
-#    {hvar}._attrs = (int *) _attrs;
-#    int attrsize = 3 + {hvar}.ndim()*2; // should match with get_argattrs
-#
-#    cudaMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
-#    cudaMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
-#
-#    cudaMemcpy({dvar}.data, {hvar}.data, {hvar}.size() * sizeof({dtype}), cudaMemcpyHostToDevice);
-#    cudaMemcpy({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int), cudaMemcpyHostToDevice);
-#
-#    return 0;
-#}}
-#"""
-#
-#cuda_h2dmalloc_template = """
-#extern "C" int {name}(void * data, void * _attrs) {{
-#
-#    {hvar}.data = ({dtype} *) data;
-#    {hvar}._attrs = (int *) _attrs;
-#    int attrsize = 3 + {hvar}.ndim()*2; // should match with get_argattrs
-#
-#    cudaMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
-#    cudaMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
-#
-#    cudaMemcpy({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int), cudaMemcpyHostToDevice);
-#
-#    return 0;
-#}}
-#"""
-#
-#cuda_d2hcopy_template = """
-#extern "C" int {name}(void * data, int size) {{
-#
-#    cudaMemcpy({hvar}.data, {dvar}.data, size * sizeof({dtype}), cudaMemcpyDeviceToHost);
-#
-#    data = (void *) {hvar}.data;
-#
-#    return 0;
-#}}
-#"""
 
 devfunc_template = """
 __global__ void _kernel({args}){{
