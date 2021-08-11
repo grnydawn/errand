@@ -36,7 +36,6 @@ GPU is available on your system.
 
 Python code (main.py)
 
-::
 
 ```python
 	import numpy as np
