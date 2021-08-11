@@ -254,7 +254,7 @@ extern "C" int run() {{
 
 def select_engine(engine, order):
 
-    if not _installed_engines:
+    if len(_installed_engines) == 0:
         from errand.cuda_hip import CudaEngine, HipEngine
 
         _installed_engines[CudaEngine.name] = CudaEngine

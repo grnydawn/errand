@@ -1,8 +1,14 @@
+# the input and output variables are renamed
+# from a, b, and c to x, y, and z
+
 [signature: x, y -> z]
 
 [cuda, hip]
 
-    int row = blockIdx.x;
-    int col = threadIdx.x;
+	// N1 teams are interpreted to Cuca/Hip blocks
+	// N2 gofers are interpreted to Cuca/Hip threads
+	int row = blockIdx.x;
+	int col = threadIdx.x;
 
-    z(row, col) = x(row, col) + y(row, col);
+	// the input and output variables keep the convinience of numpy
+	z(row, col) = x(row, col) + y(row, col);

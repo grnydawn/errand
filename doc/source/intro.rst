@@ -34,43 +34,52 @@ Python code (main.py)
 
 ::
 
-		import numpy as np
-		from errand import Errand
+	import numpy as np
+	from errand import Errand
 
-		N = 100
+	N1 = 10
+	N2 = 20
 
-		a = np.ones((N, N))
-		b = np.ones((N, N)) * 2
-		c = np.zeros((N, N))
+	a = np.ones((N1, N2))
+	b = np.ones((N1, N2))
+	c = np.zeros((N1, N2))
 
-		with Errand("order.ord") as erd:
+	with Errand("order.ord") as erd:
 
-			# call gofers
-			gofers = erd.gofers(N, N)
+		# call N1 teams of N2 gofers 
+		gofers = erd.gofers(N1, N2)
 
-			# build workshop with input and output, where actual work takes place
-			workshop = erd.workshop(a, b, "->", c)
+		# build workshop with input and output, where actual work takes place
+		workshop = erd.workshop(a, b, "->", c)
 
-			# let gofers do their work
-			gofers.run(workshop)
+		# let gofers do their work
+		gofers.run(workshop)
 
-			# check result
-			if np.array_equal(c, a+b):
-				print("SUCCESS!")
+		# do your work while gofers are doing their work
 
-            		else:
-				print("FAILURE!")
+	# check the result when the errand is completed
+	if np.array_equal(c, a+b):
+		print("SUCCESS!")
+
+	else:
+		print("FAILURE!")
 
 
 Order code (order.ord)
 
 ::
 
+	# the input and output variables are renamed
+	# from a, b, and c to x, y, and z
+
 	[signature: x, y -> z]
 
 	[cuda, hip]
 
+		// N1 teams are interpreted to Cuca/Hip blocks
+		// N2 gofers are interpreted to Cuca/Hip threads
 		int row = blockIdx.x;
 		int col = threadIdx.x;
 
+		// the input and output variables keep the convinience of numpy
 		z(row, col) = x(row, col) + y(row, col);
