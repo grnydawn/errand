@@ -1,6 +1,6 @@
-===============
-Errand
-===============
+==================================================
+Errand: Pythonic GPU and Accelerator Interface
+==================================================
 
 **errand** makes use of conventional programming tools that you may be already familar with. For example, **errand** uses Nvidia CUDA compiler or AMD HIP compiler if needed. **errand** takes responsibilities of data movements between GPU and CPU so that you can focus on computation in CUDA or HIP.
 
