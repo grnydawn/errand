@@ -5,7 +5,7 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-def ttest_vecadd1d():
+def test_vecadd1d():
 
     N = 100
 

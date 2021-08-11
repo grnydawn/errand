@@ -70,14 +70,11 @@ extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
     {hvar}._attrs = (int *) malloc(attrsize * sizeof(int));
     memcpy({hvar}._attrs, _attrs, attrsize * sizeof(int));
 
-    hipMalloc((void **)&{dvar}, sizeof({vartype}));
-    hipMalloc((void **)&{dvar}->data, {hvar}.size() * sizeof({dtype}));
-    hipMalloc((void **)&{dvar}->_attrs, attrsize * sizeof(int));
+    hipMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    hipMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
 
-    hipMemcpyHtoD({dvar}->data, {hvar}.data, {hvar}.size() * sizeof({dtype}));
-    hipMemcpyHtoD({dvar}->_attrs, {hvar}._attrs, attrsize * sizeof(int));
-
-    //printf("SSS %s, %d %d %d\\n", "{name}", {hvar}.ndim(), {hvar}.stride(0), {hvar}.stride(1));
+    hipMemcpyHtoD({dvar}.data, {hvar}.data, {hvar}.size() * sizeof({dtype}));
+    hipMemcpyHtoD({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int));
 
     return 0;
 }}
@@ -90,14 +87,11 @@ extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
     {hvar}._attrs = (int *) malloc(attrsize * sizeof(int));
     memcpy({hvar}._attrs, _attrs, attrsize * sizeof(int));
 
-    hipMalloc((void **)&{dvar}, sizeof({vartype}));
-    hipMalloc((void **)&{dvar}->data, {hvar}.size() * sizeof({dtype}));
-    hipMalloc((void **)&{dvar}->_attrs, attrsize * sizeof(int));
+    hipMalloc((void **)&{dvar}.data, {hvar}.size() * sizeof({dtype}));
+    hipMalloc((void **)&{dvar}._attrs, attrsize * sizeof(int));
 
     //hipMemcpyHtoD({dvar}.data, {hvar}.data, {hvar}.size() * sizeof({dtype}));
-    hipMemcpyHtoD({dvar}->_attrs, {hvar}._attrs, attrsize * sizeof(int));
-
-    //printf("SSS %s, %d %d %d\\n", "{name}", {hvar}.ndim(), {hvar}.size(), {hvar}.stride(0));
+    hipMemcpyHtoD({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int));
 
     return 0;
 }}
@@ -106,12 +100,7 @@ extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
 hip_d2hcopy_template = """
 extern "C" int {name}(void * data) {{
 
-    //printf("SSS1, %d %d %d\\n", {hvar}.ndim(), {hvar}.size(), {hvar}.stride(0));
-    ///hipMemcpyDtoH({hvar}.data, {dvar}.data, {hvar}.size() * sizeof({dtype}));
-    hipMemcpyDtoH(data, {dvar}->data, {hvar}.size() * sizeof({dtype}));
-    //printf("SSS2, %d %d %d\\n", {hvar}.ndim(), {hvar}.size(), {hvar}.stride(0));
-
-    //data = (void *) {hvar}.data;
+    hipMemcpyDtoH(data, {dvar}.data, {hvar}.size() * sizeof({dtype}));
 
     return 0;
 }}
@@ -126,12 +115,9 @@ extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
 
     cudaMalloc((void **)&({dvar}.data), {hvar}.size() * sizeof({dtype}));
     cudaMalloc((void **)&({dvar}._attrs), attrsize * sizeof(int));
-    //printf("SSS1 %s, %d %d %d\\n", "{name}", {hvar}.ndim(), {hvar}.stride(0), {hvar}.stride(1));
 
     cudaMemcpy({dvar}.data, {hvar}.data, {hvar}.size() * sizeof({dtype}), cudaMemcpyHostToDevice);
     cudaMemcpy({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int), cudaMemcpyHostToDevice);
-
-    //printf("SSS2 %s, %d %d %d\\n", "{name}", {hvar}.ndim(), {hvar}.stride(0), {hvar}.stride(1));
 
     return 0;
 }}
@@ -147,10 +133,7 @@ extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
     cudaMalloc((void **)&({dvar}.data), {hvar}.size() * sizeof({dtype}));
     cudaMalloc((void **)&({dvar}._attrs), attrsize * sizeof(int));
 
-    //cudaMemcpy({dvar}.data, {hvar}.data, {hvar}.size() * sizeof({dtype}), cudaMemcpyHostToDevice);
     cudaMemcpy({dvar}._attrs, {hvar}._attrs, attrsize * sizeof(int), cudaMemcpyHostToDevice);
-
-    //printf("TTT %s, %d %d %d\\n", "{name}", {hvar}.ndim(), {hvar}.size(), {hvar}.stride(0));
 
     return 0;
 }}
@@ -159,12 +142,7 @@ extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
 cuda_d2hcopy_template = """
 extern "C" int {name}(void * data) {{
 
-    //printf("SSS1, %d %d %d\\n", {hvar}.ndim(), {hvar}.size(), {hvar}.stride(0));
-    ///cudaMemcpy({hvar}.data, {dvar}.data, {hvar}.size() * sizeof({dtype}), cudaMemcpyDeviceToHost);
     cudaMemcpy(data, {dvar}.data, {hvar}.size() * sizeof({dtype}), cudaMemcpyDeviceToHost);
-    //printf("SSS2, %d %d %d\\n", {hvar}.ndim(), {hvar}.size(), {hvar}.stride(0));
-
-    //data = (void *) {hvar}.data;
 
     return 0;
 }}
