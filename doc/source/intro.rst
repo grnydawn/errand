@@ -18,7 +18,7 @@ You can install errand from github code repository if you want to try the latest
         >>> python setup.py install
 
 
-Vector addition example in CUDA(Nvidia) or HIP(AMD)
+Numpy array example in CUDA(Nvidia) or HIP(AMD)
 -------------------------------------------------------
 
 To run the example, create two source files in a folder as shown below, and run the Python script as usual.
@@ -44,6 +44,7 @@ Python code (main.py)
 	b = np.ones((N1, N2))
 	c = np.zeros((N1, N2))
 
+    # creates an errand context with an "order"
 	with Errand("order.ord") as erd:
 
 		# call N1 teams of N2 gofers 
@@ -55,7 +56,7 @@ Python code (main.py)
 		# let gofers do their work
 		gofers.run(workshop)
 
-		# do your work while gofers are doing their work
+		# do your work below while gofers are doing their work
 
 	# check the result when the errand is completed
 	if np.array_equal(c, a+b):
