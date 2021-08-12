@@ -67,3 +67,25 @@ def test_vecadd2d():
         gofers.run(workshop)
 
     assert np.array_equal(c, a+b)
+
+def test_listadd2d():
+
+    NROW = 2
+    NCOL = 3
+
+    a = [[1,1,1], [1,1,1]]
+    b = [[1,1,1], [1,1,1]]
+    c = [[0,0,0], [0,0,0]]
+
+    order = os.path.join(here, "res", "vecadd2d.ord")
+
+    with Errand(order, timeout=5) as erd:
+        gofers = erd.gofers(NROW, NCOL)
+
+        workshop = erd.workshop(a, b, "->", c)
+
+        gofers.run(workshop)
+
+    for i in range(NROW):
+        for j in range(NCOL):
+            assert c[i][j] == a[i][j] + b[i][j]

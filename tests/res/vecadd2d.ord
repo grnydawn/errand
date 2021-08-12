@@ -9,8 +9,8 @@ control = True
 
 [cuda, hip@enable=control]
 
-	// N1 teams are interpreted to Cuca/Hip blocks
-	// N2 gofers are interpreted to Cuca/Hip threads
+	// NROW teams are interpreted to Cuca/Hip blocks
+	// NCOL gofers are interpreted to Cuca/Hip threads
 
 	int row = blockIdx.x;
 	int col = threadIdx.x;

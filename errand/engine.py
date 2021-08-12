@@ -179,6 +179,8 @@ extern "C" int run() {{
             f.write(code)
 
         # generate shared library
+        # TODO : automated compiler option selection
+        # TODO : retry compilation for debug and performance optimization
 
         libpath = os.path.join(self.workdir, fname + "." + self.libext)
         cmd = "%s %s -o %s %s" % (self.compiler_path(), self.compiler_option(),
@@ -243,7 +245,21 @@ extern "C" int run() {{
             res = h2dmalloc(arg["data"], cattrs(*attrs), len(attrs))
 
     def _copy2orgdata(self, arg):
-        raise Exception("Data copy for output data is not supported yet.")
+
+        def _copyto(dst, src):
+
+            if src.ndim == 1:
+                for i, e in enumerate(src):
+                    dst[i] = e
+            else:
+                for i in range(src.shape[0]):
+                    _copyto(dst[i], src[i])
+
+        if arg["data"].ndim == 0:
+            raise Exception("Zero-dimension copy is not allowed.")
+
+        else:
+            _copyto(arg["orgdata"], arg["data"])
 
     def d2hcopy(self, outargs):
 

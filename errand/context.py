@@ -5,7 +5,7 @@ Define Errand context
 """
 
 import time, inspect
-from numpy import ndarray
+from numpy import ndarray, asarray
 
 from errand.order import Order
 from errand.engine import select_engine
@@ -21,6 +21,13 @@ class Context(object):
 """
 
     def __init__(self, order, workdir, engine=None, context=None, timeout=None):
+
+        # TODO: timing measurement
+        # TODO: debugging support
+        # TODO: logging support
+        # TODO: testing support
+        # TODO: optimization support
+        # TODO: documentation support
 
         self._env = dict(errand_builtins)
         self.tasks = {}
@@ -60,7 +67,7 @@ class Context(object):
             # primitive types
             raise Exception("No supported type: %s" % str(type(arg)))
 
-        name = caller_args[id(data)]
+        name = caller_args[id(arg)]
         
         return {"data": data, "orgdata": arg, "npid": id(data),
                 "memid": id(data.data), "orgname": name, "curname": name}
@@ -77,9 +84,9 @@ class Context(object):
 
             if outargs is not None:
 
-                if not isinstance(varg, (ndarray, list, dict, set)):
-                    raise Exception(("It seems that output variable, '%s',"
-                        "is not mutable.") % caller_args[id(varg)])
+                if not isinstance(varg, (ndarray, list)):
+                    raise Exception(("Output variable, '%s',"
+                        "is not a numpy ndarray or list.") % caller_args[id(varg)])
 
                 outargs.append(self._pack_argument(varg, caller_args))
 
