@@ -1,5 +1,5 @@
 ===============
-Getting-started
+Getting started
 ===============
 
 **errand** makes use of conventional programming tools that you may be already familar with. For example, **errand** uses Nvidia CUDA compiler or AMD HIP compiler if needed. **errand** takes responsibilities of data movements between GPU and CPU so that you can focus on computation in CUDA or HIP.
@@ -33,6 +33,9 @@ GPU is available on your system.
 Python code (main.py)
 
 ::
+
+	# This example shows how to add numpy arrays
+	# using Errand with Cuda or Hip backend.
 
 	import numpy as np
 	from errand import Errand
