@@ -43,32 +43,13 @@ def funcargseval(text, lenv):
 
     return fargs
 
+
 def which(pgm):
     path=os.getenv('PATH')
     for p in path.split(os.path.pathsep):
         p=os.path.join(p,pgm)
         if os.path.exists(p) and os.access(p,os.X_OK):
             return p
-
-def split_arguments(*vargs):
-
-    inargs = []
-    outargs = None
-
-    for varg in vargs:
-        if isinstance(varg, str) and varg == "->":
-            outargs = []
-
-        elif outargs is not None:
-            outargs.append(varg)
-
-        else:
-            inargs.append(varg)
-
-    if outargs is None:
-        outargs = []
-
-    return (inargs, outargs)
 
 
 def parse_literal_args(expr):

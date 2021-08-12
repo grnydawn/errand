@@ -67,7 +67,6 @@ extern "C" int run() {{
 
         self.workdir = workdir
         self.sharedlib = None
-        self.argmap = {}
         self.nteams = None
         self.nmembers = None
         self.inargs = None
@@ -121,8 +120,8 @@ extern "C" int run() {{
     def compiler_path(self):
         pass
 
-    def getname_argtriple(self, arg):
-        return (self.argmap[id(arg)], arg.ndim, self.getname_ctype(arg))
+    def getname_argpair(self, arg):
+        return (arg["data"].ndim, self.getname_ctype(arg))
 
     @abc.abstractmethod
     def compiler_option(self):
@@ -130,21 +129,22 @@ extern "C" int run() {{
 
     def get_ctype(self, arg):
        
-        return self.dtypemap[arg.dtype.name][1]
+        return self.dtypemap[arg["data"].dtype.name][1]
 
     def getname_ctype(self, arg):
        
-        return self.dtypemap[arg.dtype.name][0]
+        return self.dtypemap[arg["data"].dtype.name][0]
  
     def gencode(self, nteams, nmembers, inargs, outargs, order):
 
-        self.innames, self.outnames = order.get_argnames()
+        innames, outnames = order.get_argnames()
 
-        assert len(self.innames) == len(inargs), "The number of input arguments mismatches."
-        assert len(self.outnames) == len(outargs), "The number of input arguments mismatches."
+        if innames or outnames:
+            assert len(innames) == len(inargs), "The number of input arguments mismatches."
+            assert len(outnames) == len(outargs), "The number of input arguments mismatches."
 
-        for aname, (arg, attr) in zip(self.innames+self.outnames, inargs+outargs):
-            self.argmap[id(arg)] = aname
+            for arg, name in zip(inargs+outargs, innames+outnames):
+                arg["curname"] = name
 
         self.nteams = nteams
         self.nmembers = nmembers
@@ -215,41 +215,42 @@ extern "C" int run() {{
         pass
 
     @abc.abstractmethod
-    def get_argattrs(self, arg):
+    def get_numpyattrs(self, arg):
         pass
 
     def h2dcopy(self, inargs, outargs):
 
         # shape, dtype, strides, itemsize, ndims, flags, size, nbytes flat, ctypes, reshape
 
-        for arg, attr in inargs:
+        for arg in inargs:
 
-            attrs = self.get_argattrs(arg)
+            attrs = self.get_numpyattrs(arg)
             cattrs = c_int*len(attrs)
 
             h2dcopy = getattr(self.sharedlib, self.getname_h2dcopy(arg))
             h2dcopy.restype = c_int
             h2dcopy.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int] 
-            res = h2dcopy(arg, cattrs(*attrs), len(attrs))
+            res = h2dcopy(arg["data"], cattrs(*attrs), len(attrs))
 
-        for arg, attr in outargs:
+        for arg in outargs:
 
-            attrs = self.get_argattrs(arg)
+            attrs = self.get_numpyattrs(arg)
             cattrs = c_int*len(attrs)
 
             h2dmalloc = getattr(self.sharedlib, self.getname_h2dmalloc(arg))
             h2dmalloc.restype = c_int
             h2dmalloc.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int]
-            res = h2dmalloc(arg, cattrs(*attrs), len(attrs))
+            res = h2dmalloc(arg["data"], cattrs(*attrs), len(attrs))
 
     def d2hcopy(self, outargs):
 
-        for arg, attr in outargs:
+        for arg in outargs:
+
             d2hcopy = getattr(self.sharedlib, self.getname_d2hcopy(arg))
             d2hcopy.restype = c_int
             d2hcopy.argtypes = [ndpointer(self.get_ctype(arg))]
 
-            res = d2hcopy(arg)
+            res = d2hcopy(arg["data"])
 
 
 def select_engine(engine, order):

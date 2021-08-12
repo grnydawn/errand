@@ -15,9 +15,8 @@ class Workshop(object):
 
     def __init__(self, inargs, outargs, order, engine, workdir):
 
-        self.inargs = [(i, {}) for i in inargs]
-        self.outargs = [(o, {}) for o in outargs]
-
+        self.inargs = inargs
+        self.outargs = outargs
         self.order = order
         self.engine = engine
         self.workdir = workdir

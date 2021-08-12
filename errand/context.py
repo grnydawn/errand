@@ -4,14 +4,14 @@ Define Errand context
 
 """
 
-import time
+import time, inspect
 
 from errand.order import Order
 from errand.engine import select_engine
 from errand.gofers import Gofers
 from errand.workshop import Workshop
 
-from errand.util import split_arguments, errand_builtins
+from errand.util import errand_builtins
 
 
 class Context(object):
@@ -44,12 +44,40 @@ class Context(object):
         else:
             return Gofers(1)
 
+    def _pack_argument(self, arg, caller_args):
+        name = caller_args[id(arg)]
+        return {"data": arg, "npid": id(arg), "memid": id(arg.data),
+                "orgname": name, "curname": name}
+
+    def _split_arguments(self, vargs, caller_args):
+
+        inargs = []
+        outargs = None
+
+        for varg in vargs:
+            if isinstance(varg, str) and varg == "->":
+                outargs = []
+
+            elif outargs is not None:
+                outargs.append(self._pack_argument(varg, caller_args))
+
+            else:
+                inargs.append(self._pack_argument(varg, caller_args))
+
+        if outargs is None:
+            outargs = []
+
+        return (inargs, outargs)
 
     def workshop(self, *vargs, **kwargs):
 
-        inargs, outargs = split_arguments(*vargs)
+        caller_local_vars = inspect.currentframe().f_back.f_locals.items()
+        caller_args = dict([(id(v), n) for n, v in caller_local_vars])
 
-        ws = Workshop(inargs, outargs, self.order, self.engine, self.workdir, **kwargs)
+        inargs, outargs = self._split_arguments(vargs, caller_args)
+
+        ws = Workshop(inargs, outargs, self.order, self.engine,
+                        self.workdir, **kwargs)
 
         self.tasks[ws] = {}
 

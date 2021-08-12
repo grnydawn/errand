@@ -166,44 +166,42 @@ class CudaHipEngine(Engine):
 
     def getname_h2dcopy(self, arg):
 
-        name = self.argmap[id(arg)]
-        return "h2dcopy_%s" % name
+        return "h2dcopy_%s" % arg["curname"]
       
     def getname_h2dmalloc(self, arg):
 
-        name = self.argmap[id(arg)]
-        return "h2dmalloc_%s" % name
+        return "h2dmalloc_%s" % arg["curname"]
 
     def getname_d2hcopy(self, arg):
 
-        name = self.argmap[id(arg)]
-        return "d2hcopy_%s" % name
+        return "d2hcopy_%s" % arg["curname"]
 
     def getname_vartype(self, arg, devhost):
 
-        aname, ndim, dname = self.getname_argtriple(arg)
+        ndim, dname = self.getname_argpair(arg)
         return "%s_%s_dim%s" % (devhost, dname, ndim)
 
     def getname_var(self, arg, devhost):
 
-        return devhost + "_" + self.argmap[id(arg)]
+        return devhost + "_" + arg["curname"]
 
-    def len_argattrs(self, arg):
+    def len_numpyattrs(self, arg):
 
-        return 3 + len(arg.shape)*2
+        return 3 + len(arg["data"].shape)*2
 
-    def get_argattrs(self, arg):
+    def get_numpyattrs(self, arg):
+        data = arg["data"]
 
-        return ((arg.ndim, arg.itemsize, arg.size) + arg.shape +
-                tuple([int(s//arg.itemsize) for s in arg.strides]))
+        return ((data.ndim, data.itemsize, data.size) + data.shape +
+                tuple([int(s//data.itemsize) for s in data.strides]))
 
     def code_varclass(self):
 
         dvs = {}
 
-        for arg, attr in self.inargs+self.outargs:
+        for arg in self.inargs+self.outargs:
 
-            aname, ndim, dname = self.getname_argtriple(arg)
+            ndim, dname = self.getname_argpair(arg)
 
             if dname in dvs:
                 dvsd = dvs[dname]
@@ -213,9 +211,11 @@ class CudaHipEngine(Engine):
                 dvs[dname] = dvsd
                 
             if ndim not in dvsd:
-                oparg = ", ".join(["int dim%d"%d for d in range(arg.ndim)])
-                offset = "+".join(["s[%d]*dim%d"%(d,d) for d in range(arg.ndim)])
-                attrsize = self.len_argattrs(arg)
+                oparg = ", ".join(["int dim%d"%d for d in
+                                    range(arg["data"].ndim)])
+                offset = "+".join(["s[%d]*dim%d"%(d,d) for d in
+                                    range(arg["data"].ndim)])
+                attrsize = self.len_numpyattrs(arg)
 
                 hvartype = self.getname_vartype(arg, "host")
                 out = varclass_template.format(vartype=hvartype, oparg=oparg,
@@ -235,9 +235,9 @@ class CudaHipEngine(Engine):
 
         out = ""
 
-        for arg, attr in self.inargs+self.outargs:
+        for arg in self.inargs+self.outargs:
 
-            aname, ndim, dname = self.getname_argtriple(arg)
+            ndim, dname = self.getname_argpair(arg)
 
             out += host_vardef_template.format(vartype=self.getname_vartype(arg,
                     "host"), varname=self.getname_var(arg, "host"))
@@ -252,11 +252,11 @@ class CudaHipEngine(Engine):
         args = []
         body = "\n".join(self.order.get_section(self.name)[2])
 
-        for arg, attr in self.inargs+self.outargs:
+        for arg in self.inargs+self.outargs:
 
-            aname, ndim, dname = self.getname_argtriple(arg)
+            ndim, dname = self.getname_argpair(arg)
 
-            args.append("dev_%s_dim%s %s" % (dname, ndim, aname))
+            args.append("dev_%s_dim%s %s" % (dname, ndim, arg["curname"]))
 
         return devfunc_template.format(args=", ".join(args), body=body)
 
@@ -264,27 +264,29 @@ class CudaHipEngine(Engine):
 
         out = ""
 
-        for arg, attr in self.inargs:
+        for arg in self.inargs:
 
-            aname, ndim, dname = self.getname_argtriple(arg)
+            ndim, dname = self.getname_argpair(arg)
             fname = self.getname_h2dcopy(arg)
 
             template = self.get_template("h2dcopy")
             hvar = self.getname_var(arg, "host")
             dvar = self.getname_var(arg, "dev")
             vartype = self.getname_vartype(arg, "dev")
-            out += template.format(hvar=hvar, dvar=dvar, name=fname, dtype=dname, vartype=vartype)
+            out += template.format(hvar=hvar, dvar=dvar, name=fname,
+                                    dtype=dname, vartype=vartype)
 
-        for arg, attr in self.outargs:
+        for arg in self.outargs:
 
-            aname, ndim, dname = self.getname_argtriple(arg)
+            ndim, dname = self.getname_argpair(arg)
             fname = self.getname_h2dmalloc(arg)
 
             template = self.get_template("h2dmalloc")
             hvar = self.getname_var(arg, "host")
             dvar = self.getname_var(arg, "dev")
             vartype = self.getname_vartype(arg, "dev")
-            out += template.format(hvar=hvar, dvar=dvar, name=fname, dtype=dname, vartype=vartype)
+            out += template.format(hvar=hvar, dvar=dvar, name=fname,
+                                    dtype=dname, vartype=vartype)
 
         return out
 
@@ -292,9 +294,9 @@ class CudaHipEngine(Engine):
 
         out  = ""
 
-        for aname, (arg, attr) in zip(self.outnames, self.outargs):
+        for arg in self.outargs:
 
-            aname, ndim, dname = self.getname_argtriple(arg)
+            ndim, dname = self.getname_argpair(arg)
             fname = self.getname_d2hcopy(arg)
 
             template = self.get_template("d2hcopy")
@@ -308,8 +310,7 @@ class CudaHipEngine(Engine):
 
         args = []
 
-        for aname, (arg, attr) in zip(self.innames+self.outnames,
-            self.inargs+self.outargs):
+        for arg in self.inargs+self.outargs:
 
             args.append(self.getname_var(arg, "dev"))
 
