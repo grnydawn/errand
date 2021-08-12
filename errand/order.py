@@ -5,11 +5,13 @@
 
 import os
 
-from errand.util import parse_literal_args
+from errand.util import parse_literal_args, appeval
 
 class Order(object):
 
-    def __init__(self, order):
+    def __init__(self, order, env):
+
+        self._env = env
 
         if isinstance(order, Order):
             self.sections = order.sections
@@ -25,6 +27,10 @@ class Order(object):
         else:
             raise Exception("Wrong order: %s" % str(order))
 
+        if self.sections["_header_"]:
+            val, lenv = appeval("\n".join(self.sections["_header_"]),
+                            self._env)
+            self._env.update(lenv)
 
     def _parse(self, lines):
 
@@ -47,7 +53,14 @@ class Order(object):
                 elif stage == 1:
                     if buf:
                         for name, arg, attr, body in self._parse_section(buf):
-                            sections[name] = (arg, attr, body)
+                            if name not in sections:
+                                section = []
+                                sections[name] = section
+
+                            else:
+                                section = sections[name]
+
+                            section.append((arg, attr, body))
 
                 buf = []
 
@@ -59,7 +72,14 @@ class Order(object):
 
             elif stage == 1:
                 for name, arg, attr, body in self._parse_section(buf):
-                    sections[name] = (arg, attr, body)
+                    if name not in sections:
+                        section = []
+                        sections[name] = section
+
+                    else:
+                        section = sections[name]
+
+                    section.append((arg, attr, body))
 
         return sections
 
@@ -161,8 +181,10 @@ class Order(object):
         outargs = []
 
         if "signature" in self.sections:
-            sigsec = self.sections["signature"]
-            s1 = sigsec[0].split("->", 1)
+            sigsec = self.eval_enabled(self.sections["signature"])
+            if len(sigsec) == 0: raise Exception("No signature section is enabled.")
+
+            s1 = sigsec[0][0].split("->", 1)
 
             if len(s1) > 1:
                 inargs = [s.strip() for s in s1[0].split(",")]
@@ -185,8 +207,25 @@ class Order(object):
 
         return tnames
 
+    def eval_enabled(self, secs):
+
+        out = []
+
+        # arg, attr, body
+        for sec in secs:
+            if (not sec[1] or ("enable" not in sec[1]) or
+                appeval(sec[1]["enable"], self._env)[0]):
+                out.append(sec)
+
+        return out
 
     def get_section(self, name):
 
-        # TODO: selective section
-        return self.sections[name]
+        if name in self.sections:
+            candidates = self.eval_enabled(self.sections[name])
+
+            if len(candidates) >= 1:
+                 return candidates[0]
+
+            else: 
+                raise Exception("No valid section with '%s'" % name)

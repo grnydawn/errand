@@ -1,9 +1,13 @@
+
+# turn on/off a section
+control = True
+
 # the input and output variables are renamed
 # from a, b, and c to x, y, and z
 
 [signature: x, y -> z]
 
-[cuda, hip]
+[cuda, hip@enable=control]
 
 	// N1 teams are interpreted to Cuca/Hip blocks
 	// N2 gofers are interpreted to Cuca/Hip threads

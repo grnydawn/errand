@@ -11,7 +11,7 @@ from errand.engine import select_engine
 from errand.gofers import Gofers
 from errand.workshop import Workshop
 
-from errand.util import split_arguments
+from errand.util import split_arguments, errand_builtins
 
 
 class Context(object):
@@ -21,10 +21,12 @@ class Context(object):
 
     def __init__(self, order, workdir, engine=None, context=None, timeout=None):
 
+        self._env = dict(errand_builtins)
         self.tasks = {}
         self.output = []
 
-        self.order = order if isinstance(order, Order) else Order(order)
+        self.order = order if isinstance(order, Order) else Order(order, self._env)
+
         self.workdir = workdir
         self.engine = select_engine(engine, self.order)(workdir)
         self.context = context
