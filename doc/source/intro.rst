@@ -73,11 +73,6 @@ Order code (order.ord)
 
 ::
 
-	# the input and output variables can be renamed.
-	# For example, from a, b, and c to x, y, and z in this example.
-
-	[signature: x, y -> z]
-
 	[cuda, hip]
 
 		// N1 teams are interpreted to Cuda/Hip blocks
@@ -89,4 +84,4 @@ Order code (order.ord)
 		// the input and output variables keep the convinience of numpy
 
 		if (row < x.shape(0) && col < x.shape(1))
-			z(row, col) = x(row, col) + y(row, col);
+			c(row, col) = a(row, col) + b(row, col);

@@ -51,16 +51,16 @@ def test_vecadd1d():
 
 def test_vecadd2d():
 
-    N1, N2 = 2, 3
+    NROW, NCOL = 2000, 300
 
-    a = np.arange(N1*N2).reshape(N1, N2)
-    b = np.arange(N1*N2).reshape(N1, N2)
-    c = np.zeros((N1, N2), dtype=np.int64)
+    a = np.ones((NROW, NCOL))
+    b = np.ones((NROW, NCOL))
+    c = np.zeros((NROW, NCOL))
 
     order = os.path.join(here, "res", "vecadd2d.ord")
 
     with Errand(order, timeout=5) as erd:
-        gofers = erd.gofers(N1, N2)
+        gofers = erd.gofers(NROW, NCOL)
 
         workshop = erd.workshop(a, b, "->", c)
 
