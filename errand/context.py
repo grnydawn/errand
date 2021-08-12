@@ -5,6 +5,7 @@ Define Errand context
 """
 
 import time, inspect
+from numpy import ndarray
 
 from errand.order import Order
 from errand.engine import select_engine
@@ -45,9 +46,24 @@ class Context(object):
             return Gofers(1)
 
     def _pack_argument(self, arg, caller_args):
-        name = caller_args[id(arg)]
-        return {"data": arg, "npid": id(arg), "memid": id(arg.data),
-                "orgname": name, "curname": name}
+
+        if isinstance(arg, ndarray):
+            data = arg
+
+        elif isinstance(arg, (list, tuple, set)):
+            data = asarray(arg)
+
+        elif isinstance(arg, dict):
+            data = asarray([arg[k] for k in sorted(arg.keys())])
+
+        else:
+            # primitive types
+            raise Exception("No supported type: %s" % str(type(arg)))
+
+        name = caller_args[id(data)]
+        
+        return {"data": data, "orgdata": arg, "npid": id(data),
+                "memid": id(data.data), "orgname": name, "curname": name}
 
     def _split_arguments(self, vargs, caller_args):
 
@@ -57,8 +73,14 @@ class Context(object):
         for varg in vargs:
             if isinstance(varg, str) and varg == "->":
                 outargs = []
+                continue
 
-            elif outargs is not None:
+            if outargs is not None:
+
+                if not isinstance(varg, (ndarray, list, dict, set)):
+                    raise Exception(("It seems that output variable, '%s',"
+                        "is not mutable.") % caller_args[id(varg)])
+
                 outargs.append(self._pack_argument(varg, caller_args))
 
             else:

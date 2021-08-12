@@ -21,5 +21,5 @@ class Gofers(object):
 
     def run(self, workshop):
 
-        workshop.open(*self.sizes)
+        return workshop.open(*self.sizes)
 

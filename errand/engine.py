@@ -242,6 +242,9 @@ extern "C" int run() {{
             h2dmalloc.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int]
             res = h2dmalloc(arg["data"], cattrs(*attrs), len(attrs))
 
+    def _copy2orgdata(self, arg):
+        raise Exception("Data copy for output data is not supported yet.")
+
     def d2hcopy(self, outargs):
 
         for arg in outargs:
@@ -251,6 +254,9 @@ extern "C" int run() {{
             d2hcopy.argtypes = [ndpointer(self.get_ctype(arg))]
 
             res = d2hcopy(arg["data"])
+
+            if type(arg["data"]) != type(arg["orgdata"]):
+                self._copy2orgdata(arg)
 
 
 def select_engine(engine, order):
