@@ -22,12 +22,20 @@ class Context(object):
 
     def __init__(self, order, workdir, engine=None, context=None, timeout=None):
 
+        # TODO: config data
+        # TODO: documentation
+        # TODO: examples
+        # TODO: show cases(time slice to time series)
+        # TODO: native programming support more than numpy-like arguments
         # TODO: timing measurement
+        # TODO: compiler support
+        # TODO: compiling cache
         # TODO: debugging support
         # TODO: logging support
         # TODO: testing support
         # TODO: optimization support
         # TODO: documentation support
+        # TODO: plugin engines
 
         self._env = dict(errand_builtins)
         self.tasks = {}
