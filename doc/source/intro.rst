@@ -53,10 +53,10 @@ Python code (main.py)
 		# call N1 teams of N2 gofers 
 		gofers = erd.gofers(N1, N2)
 
-		# build workshop with input and output, where actual work takes place
+		# build workshop with input(a, b) and output(c)
 		workshop = erd.workshop(a, b, "->", c)
 
-		# let gofers do their work
+		# let gofers do their work at the workshop
 		gofers.run(workshop)
 
 		# do your work below while gofers are doing their work
