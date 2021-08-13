@@ -45,23 +45,23 @@ Python code (main.py)
 	import numpy as np
 	from errand import Errand
 
-	N1 = 10
-	N2 = 20
+	NROW = 10
+	NCOL = 20
 
-	a = np.ones((N1, N2))
-	b = np.ones((N1, N2))
-	c = np.zeros((N1, N2))
+	a = np.ones((NROW, NCOL))
+	b = np.ones((NROW, NCOL))
+	c = np.zeros((NROW, NCOL))
 
 	# creates an errand context with an "order"
 	with Errand("order.ord") as erd:
 
-		# call N1 teams of N2 gofers 
-		gofers = erd.gofers(N1, N2)
+		# call NROW teams of NCOL gofers 
+		gofers = erd.gofers(NROW, NCOL)
 
-		# build workshop with input and output, where actual work takes place
+		# build workshop with input(a, b) and output(c)
 		workshop = erd.workshop(a, b, "->", c)
 
-		# let gofers do their work
+		# let gofers do their work at the workshop
 		gofers.run(workshop)
 
 		# do your work below while gofers are doing their work
@@ -79,15 +79,10 @@ Order code (order.ord)
 
 ::
 
-	# the input and output variables can be renamed.
-	# For example, from a, b, and c to x, y, and z in this example.
-
-	[signature: x, y -> z]
-
 	[cuda, hip]
 
-		// N1 teams are interpreted to Cuda/Hip blocks
-		// N2 gofers of a team are interpreted to Cuda/Hip threads
+		// NROW teams are interpreted to Cuda/Hip blocks
+		// NCOL gofers of a team are interpreted to Cuda/Hip threads
 
 		int row = blockIdx.x;
 		int col = threadIdx.x;
@@ -95,4 +90,4 @@ Order code (order.ord)
 		// the input and output variables keep the convinience of numpy
 
 		if (row < x.shape(0) && col < x.shape(1))
-			z(row, col) = x(row, col) + y(row, col);
+			c(row, col) = a(row, col) + b(row, col);
