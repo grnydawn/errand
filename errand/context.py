@@ -36,6 +36,9 @@ class Context(object):
         # TODO: optimization support
         # TODO: documentation support
         # TODO: plugin engines
+        # TODO: registry for engines, orders, sharedlibs, etc.
+        # TODO: order template generation for informing mapping from teams/gofers to language specfic interpretation, and data movements, and shared/private variables, ...
+        # TODO: basic approaches: user focuses on computation. clear/simple/reasonable role of Errand
 
         self._env = dict(errand_builtins)
         self.tasks = {}
