@@ -10,6 +10,7 @@ from numpy import double
 from numpy.ctypeslib import load_library
 
 from errand.engine import Engine
+from errand.compiler import select_compiler
 from errand.util import which
 
 # key ndarray attributes

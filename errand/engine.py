@@ -78,6 +78,14 @@ extern "C" int run() {{
     def isavail(cls):
         pass
 
+    @abc.abstractmethod
+    def compiler_path(self):
+        pass
+
+    @abc.abstractmethod
+    def compiler_option(self):
+        pass
+
     def code_top(self):
         return ""
 
@@ -116,16 +124,8 @@ extern "C" int run() {{
     def code_tail(self):
         return ""
 
-    @abc.abstractmethod
-    def compiler_path(self):
-        pass
-
     def getname_argpair(self, arg):
         return (arg["data"].ndim, self.getname_ctype(arg))
-
-    @abc.abstractmethod
-    def compiler_option(self):
-        pass
 
     def get_ctype(self, arg):
        
