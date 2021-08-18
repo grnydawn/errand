@@ -7,6 +7,68 @@ import os
 
 from errand.util import parse_literal_args, appeval
 
+# NOTE: _header_ should have only one section
+# NOTE: Other sections has a list of sections under a same section name
+# NOTE: section enable is evaluated at loading the order file
+
+class Section(object):
+
+    def __init__(self, arg, attr, body):
+
+        self.arg = arg
+        self.attr = attr
+        self.body = body
+
+    def __str__(self):
+            return "\n".join(self.body)
+
+    def isenabled(self, env):
+
+        return (not self.attr or ("enable" not in self.attr) or
+            appeval(self.attr["enable"], env)[0])
+
+
+class SignatureSection(Section):
+
+    def get_argnames(self):
+
+        inargs = []
+        outargs = []
+
+        s1 = self.arg.split("->", 1)
+
+        if len(s1) > 1:
+            inargs = [s.strip() for s in s1[0].split(",")]
+            outargs = [s.strip() for s in s1[1].split(",")]
+
+        elif len(s1) == 1:
+            inargs = [s.strip() for s in s1[0].split(",")]
+
+        return (inargs, outargs)
+
+
+class SectionList(object):
+
+    def __init__(self, secs=[]):
+        self.sections = secs
+
+    def select_one(self, env):
+
+        for sec in self.sections:
+            if sec.isenabled(env):
+                return sec
+
+    def select_many(self, env):
+
+        secs = []
+
+        for sec in self.sections:
+            if sec.isenabled(env):
+                secs.append(sec)
+
+        return secs
+
+
 class Order(object):
 
     def __init__(self, order, env):
@@ -27,15 +89,14 @@ class Order(object):
         else:
             raise Exception("Wrong order: %s" % str(order))
 
-        if self.sections["_header_"]:
-            val, lenv = appeval("\n".join(self.sections["_header_"]),
-                            self._env)
+        if self.sections["_header_"].body:
+            val, lenv = appeval(str(self.sections["_header_"]), self._env)
             self._env.update(lenv)
 
     def _parse(self, lines):
 
         header = None
-        sections = {"_header_": None}
+        sections = {"_header_": Section("", None, [])}
 
         stage = 0
         buf = []
@@ -46,7 +107,7 @@ class Order(object):
             if line and line[0] == "[":
                 if stage == 0:
                     if buf:
-                        sections["_header_"] = buf
+                        sections["_header_"].body.extend(buf)
 
                     stage = 1
 
@@ -54,13 +115,19 @@ class Order(object):
                     if buf:
                         for name, arg, attr, body in self._parse_section(buf):
                             if name not in sections:
-                                section = []
-                                sections[name] = section
+                                slist = SectionList()
+                                sections[name] = slist
 
                             else:
-                                section = sections[name]
+                                slist = sections[name]
 
-                            section.append((arg, attr, body))
+                            #section.append((arg, attr, body))
+
+                            if name == "signature":
+                                slist.sections.append(SignatureSection(arg, attr, body))
+
+                            else:
+                                slist.sections.append(Section(arg, attr, body))
 
                 buf = []
 
@@ -68,18 +135,22 @@ class Order(object):
 
         if buf:
             if stage == 0:
-                sections["_header_"] = buf
+                sections["_header_"].body.extend(buf)
 
             elif stage == 1:
                 for name, arg, attr, body in self._parse_section(buf):
                     if name not in sections:
-                        section = []
-                        sections[name] = section
+                        slist = SectionList()
+                        sections[name] = slist
 
                     else:
-                        section = sections[name]
+                        slist = sections[name]
 
-                    section.append((arg, attr, body))
+                    if name == "signature":
+                        slist.sections.append(SignatureSection(arg, attr, body))
+
+                    else:
+                        slist.sections.append(Section(arg, attr, body))
 
         return sections
 
@@ -177,55 +248,35 @@ class Order(object):
 
     def get_argnames(self):
 
-        inargs = []
-        outargs = []
-
         if "signature" in self.sections:
-            sigsec = self.eval_enabled(self.sections["signature"])
-            if len(sigsec) == 0: raise Exception("No signature section is enabled.")
 
-            s1 = sigsec[0][0].split("->", 1)
+            sigsec = self.sections["signature"].select_one(self._env) 
 
-            if len(s1) > 1:
-                inargs = [s.strip() for s in s1[0].split(",")]
-                outargs = [s.strip() for s in s1[1].split(",")]
-
-            elif len(s1) == 1:
-                inargs = [s.strip() for s in s1[0].split(",")]
-
-        return (inargs, outargs)
+            if isinstance(sigsec, Section):
+                return sigsec.get_argnames()
+   
+        return ([], [])
 
     def get_targetnames(self):
 
         tnames = []
 
-        for secname in self.sections.keys():
+        for secname, slist in self.sections.items():
             if secname.startswith("_") or secname == "signature":
                 continue
 
-            tnames.append(secname)
+            sec = slist.select_one(self._env)
+
+            if isinstance(sec, Section):
+                tnames.append(secname)
 
         return tnames
 
-    def eval_enabled(self, secs):
-
-        out = []
-
-        # arg, attr, body
-        for sec in secs:
-            if (not sec[1] or ("enable" not in sec[1]) or
-                appeval(sec[1]["enable"], self._env)[0]):
-                out.append(sec)
-
-        return out
-
     def get_section(self, name):
 
-        if name in self.sections:
-            candidates = self.eval_enabled(self.sections[name])
+        for name, slist in self.sections.items():
 
-            if len(candidates) >= 1:
-                 return candidates[0]
+            sec = slist.select_one(self._env)
 
-            else: 
-                raise Exception("No valid section with '%s'" % name)
+            if sec is not None:
+                return sec

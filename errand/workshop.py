@@ -42,4 +42,4 @@ class Workshop(object):
 
             time.sleep(0.1)
 
-        self.engine.d2hcopy(self.outargs)
+        return self.engine.d2hcopy(self.outargs)

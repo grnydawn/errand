@@ -4,3 +4,8 @@
 
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if(id < x.size()) z(id) = x(id) + y(id);
+
+[pthread-c]
+	
+    z(ERD_TID) = x(ERD_TID) + y(ERD_TID);
+

@@ -63,7 +63,7 @@ extern "C" int run() {{
         "float64": ["double", c_double]
     }
 
-    def __init__(self, workdir):
+    def __init__(self, workdir, compilers, targetsystem):
 
         self.workdir = workdir
         self.sharedlib = None
@@ -72,18 +72,16 @@ extern "C" int run() {{
         self.inargs = None
         self.outargs = None
         self.order = None
+        self.compilers = compilers
+        self.hostsystem = None
+        self.targetsystem = targetsystem
 
-    @classmethod
-    @abc.abstractmethod
-    def isavail(cls):
-        pass
-
-    @abc.abstractmethod
-    def compiler_path(self):
-        pass
+    def isavail(self):
+        return (self.compilers is not None and self.compilers.isavail() and
+                self.targetsystem is not None and self.targetsystem.isavail())
 
     @abc.abstractmethod
-    def compiler_option(self):
+    def get_compiler(self):
         pass
 
     def code_top(self):
@@ -182,8 +180,12 @@ extern "C" int run() {{
         # TODO : automated compiler option selection
         # TODO : retry compilation for debug and performance optimization
 
+        compiler = self.get_compiler(self.name)[2]
+        if compiler is None:
+            raise Exception("Compiler is not available.")
+
         libpath = os.path.join(self.workdir, fname + "." + self.libext)
-        cmd = "%s %s -o %s %s" % (self.compiler_path(), self.compiler_option(),
+        cmd = "%s %s -o %s %s" % (compiler.get_path(), compiler.get_option(),
                 libpath, codepath)
 
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
@@ -279,24 +281,41 @@ def select_engine(engine, order):
 
     if len(_installed_engines) == 0:
         from errand.cuda_hip import CudaEngine, HipEngine
+        from errand.pthread import PThreadCPPEngine, PThreadCEngine
 
         _installed_engines[CudaEngine.name] = CudaEngine
         _installed_engines[HipEngine.name] = HipEngine
+        _installed_engines[PThreadCPPEngine.name] = PThreadCPPEngine
+        _installed_engines[PThreadCEngine.name] = PThreadCEngine
+
+    candidate = None
 
     if isinstance(engine, Engine):
-        return engine.__class__
+        candidate = engine.__class__
 
-    if isinstance(engine, str):
+    if candidate is None and isinstance(engine, str):
         if engine in _installed_engines:
-            return _installed_engines[engine]
-    else:
-        for tname in order.get_targetnames():
-            if tname in _installed_engines and _installed_engines[tname].isavail():
-                return _installed_engines[tname]
+            candidate = _installed_engines[engine]
 
-    if engine is None:
-        raise Exception("A compiler for any of these errand engines (%s) is not found on this system."
-                % ", ".join(_installed_engines.keys()))
+    selected = []
 
+    for tname in order.get_targetnames():
+        if tname in _installed_engines:
+            tempeng = _installed_engines[tname]
+
+            if candidate is not None:
+                if candidate is tempeng:
+                    selected.append(tempeng)
+            else:
+                selected.append(tempeng)
+
+    if len(selected) == 0:
+        if engine is None:
+            raise Exception(("A compiler for any of these errand engines (%s)"
+                    "is not found on this system.") %
+                    ", ".join(_installed_engines.keys()))
+
+        else:
+            raise Exception("%s engine is not available." % str(engine))
     else:
-        raise Exception("%s engine is not available." % str(engine))
+        return selected

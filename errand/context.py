@@ -41,13 +41,13 @@ class Context(object):
         # TODO: basic approaches: user focuses on computation. clear/simple/reasonable role of Errand
 
         self._env = dict(errand_builtins)
-        self.tasks = {}
-        self.output = []
+        self.tasks = {} # contains workshops
+        self.result = [] # contains results from workshops
 
         self.order = order if isinstance(order, Order) else Order(order, self._env)
 
         self.workdir = workdir
-        self.engine = select_engine(engine, self.order)(workdir)
+        self.engines = [e(workdir) for e in select_engine(engine, self.order)]
         self.context = context
         self.timeout = timeout
 
@@ -116,14 +116,20 @@ class Context(object):
 
         inargs, outargs = self._split_arguments(vargs, caller_args)
 
-        ws = Workshop(inargs, outargs, self.order, self.engine,
-                        self.workdir, **kwargs)
+        ws = None
+        for engine in self.engines:
+            if engine.isavail():
+                ws = Workshop(inargs, outargs, self.order, engine,
+                            self.workdir, **kwargs)
+                self.tasks[ws] = {}
+                break
 
-        self.tasks[ws] = {}
+        if ws is None:
+            raise Exception("No engine is available")
 
         return ws
 
     def shutdown(self):
 
         for ws in self.tasks:
-            self.output.append(ws.close(timeout=self.timeout))
+            self.result.append(ws.close(timeout=self.timeout))

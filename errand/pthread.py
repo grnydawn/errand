@@ -1,4 +1,4 @@
-"""Errand Cuda and Hip engine module
+"""Errand Pthread engine module
 
 
 """
@@ -6,16 +6,9 @@
 import os
 
 from errand.engine import Engine
+from errand.compiler import Compilers
+from errand.system import select_system
 from errand.util import which
-
-# key ndarray attributes
-# shape, dtype, strides, itemsize, ndim, flags, size, nbytes
-# flat, ctypes, reshape
-
-# TODO: follow ndarray convention to copy data between CPU and GPU
-# TODO: send data and array of attributes to an internal variable of generated struct
-#       the attribute array will be interpreted within the struct to various info
-
 
 varclass_template = """
 class {vartype} {{
@@ -154,11 +147,11 @@ calldevmain_template = """
     _kernel<<<{ngrids}, {nthreads}>>>({args});
 """
 
-class CudaHipEngine(Engine):
+class PThreadEngine(Engine):
 
-    def __init__(self, workdir):
+    def __init__(self, workdir, compilers, targetsystem):
 
-        super(CudaHipEngine, self).__init__(workdir)
+        super(PThreadEngine, self).__init__(workdir, compilers, targetsystem)
 
     def getname_h2dcopy(self, arg):
 
@@ -313,51 +306,27 @@ class CudaHipEngine(Engine):
         return calldevmain_template.format(ngrids=str(self.nteams),
                 nthreads=str(self.nmembers), args=", ".join(args))
 
-    def compiler_path(self):
-        return self.compiler
 
+class PThreadCEngine(PThreadEngine):
 
-class CudaEngine(CudaHipEngine):
-
-    name = "cuda"
-    codeext = "cu"
+    name = "pthread-c"
+    codeext = "c"
     libext = "so"
 
     def __init__(self, workdir):
 
-        super(CudaEngine, self).__init__(workdir)
+        compilers = Compilers("c")
+        targetsystem = select_system("cpu")
 
-        compiler = which("nvcc")
-        if compiler is None or not self.isavail():
-            raise Exception("nvcc is not found")
+        super(PThreadCEngine, self).__init__(workdir, compilers,
+            targetsystem)
 
-        self.compiler = os.path.realpath(compiler)
-        self.option = ""
+    def get_compiler(self):
+        
+        return self.compilers.select_one()
 
-    def compiler_option(self):
-        return self.option + "--compiler-options '-fPIC' --shared"
-
-    @classmethod
-    def isavail(cls):
-
-        compiler = which("nvcc")
-        if compiler is None or not os.path.isfile(compiler):
-            return False
-
-        rootdir = os.path.join(os.path.dirname(compiler), "..")
-
-        incdir = os.path.join(rootdir, "include")
-        if not os.path.isdir(incdir):
-            return False
-
-        libdir = os.path.join(rootdir, "lib64")
-        if not os.path.isdir(libdir):
-            libdir = os.path.join(rootdir, "lib")
-
-            if not os.path.isdir(libdir):
-                return False
-
-        return True
+    #def compiler_option(self):
+    #    return self.option + "--compiler-options '-fPIC' --shared"
 
     def code_header(self):
 
@@ -381,10 +350,10 @@ class CudaEngine(CudaHipEngine):
         return out
 
 
-class HipEngine(CudaHipEngine):
+class PThreadCPPEngine(PThreadEngine):
 
-    name = "hip"
-    codeext = "hip.cpp"
+    name = "pthread-c++"
+    codeext = "cpp"
     libext = "so"
 
     def __init__(self, workdir):
@@ -401,25 +370,27 @@ class HipEngine(CudaHipEngine):
     def compiler_option(self):
         return self.option + " -fPIC --shared -O0"
 
+    @classmethod
+    def isavail(cls):
 
-#        compiler = which("hipcc")
-#        if compiler is None or not os.path.isfile(compiler):
-#            return False
-#
-#        rootdir = os.path.join(os.path.dirname(compiler), "..")
-#
-#        incdir = os.path.join(rootdir, "include")
-#        if not os.path.isdir(incdir):
-#            return False
-#
-#        libdir = os.path.join(rootdir, "lib64")
-#        if not os.path.isdir(libdir):
-#            libdir = os.path.join(rootdir, "lib")
-#
-#            if not os.path.isdir(libdir):
-#                return False
-#
-#        return True
+        compiler = which("hipcc")
+        if compiler is None or not os.path.isfile(compiler):
+            return False
+
+        rootdir = os.path.join(os.path.dirname(compiler), "..")
+
+        incdir = os.path.join(rootdir, "include")
+        if not os.path.isdir(incdir):
+            return False
+
+        libdir = os.path.join(rootdir, "lib64")
+        if not os.path.isdir(libdir):
+            libdir = os.path.join(rootdir, "lib")
+
+            if not os.path.isdir(libdir):
+                return False
+
+        return True
 
     def code_header(self):
 
