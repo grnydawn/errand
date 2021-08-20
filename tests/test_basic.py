@@ -6,8 +6,10 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-#@pytest.mark.parametrize("engine", ["cuda", "hip", "pthread-c"])
-@pytest.mark.parametrize("engine", ["pthread-c"])
+#@pytest.mark.parametrize("engine", ["cuda", "hip", "pthread"])
+@pytest.mark.parametrize("engine", ["cuda"])
+#@pytest.mark.parametrize("engine", ["hip"])
+#@pytest.mark.parametrize("engine", ["pthread"])
 def test_vecadd1d(engine):
 
     N = 100
@@ -37,6 +39,7 @@ def test_vecadd1d(engine):
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
         # logical worker entities
+        # TODO: how to choose the best configuration per engine
         gofers = erd.gofers(N)
 
         # workshop represents machine, input&output, order, and engine

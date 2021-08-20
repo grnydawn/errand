@@ -26,9 +26,15 @@ class Engine(abc.ABC):
 
 {varclass}
 
+{struct}
+
 int isfinished = 0;
 
 {vardef}
+
+{varglobal}
+
+{function}
 
 {h2dcopyfunc}
 
@@ -80,9 +86,9 @@ extern "C" int run() {{
         return (self.compilers is not None and self.compilers.isavail() and
                 self.targetsystem is not None and self.targetsystem.isavail())
 
-    @abc.abstractmethod
     def get_compiler(self):
-        pass
+        
+        return self.compilers.select_one()
 
     def code_top(self):
         return ""
@@ -96,7 +102,13 @@ extern "C" int run() {{
     def code_varclass(self):
         return ""
 
+    def code_struct(self):
+        return ""
+
     def code_vardef(self):
+        return ""
+
+    def code_varglobal(self):
         return ""
 
     def code_h2dcopyfunc(self):
@@ -108,6 +120,9 @@ extern "C" int run() {{
     @abc.abstractmethod
     def code_devfunc(self):
         pass
+
+    def code_function(self):
+        return ""
 
     def code_prerun(self):
         return ""
@@ -155,10 +170,13 @@ extern "C" int run() {{
         header = self.code_header()
         namespace = self.code_namespace()
         varclass = self.code_varclass()
+        struct = self.code_struct()
         vardef = self.code_vardef()
+        varglobal = self.code_varglobal()
         h2dcopyfunc = self.code_h2dcopyfunc()
         d2hcopyfunc = self.code_d2hcopyfunc()
         devfunc = self.code_devfunc()
+        function = self.code_function()
         prerun = self.code_prerun()
         calldevmain = self.code_calldevmain()
         postrun = self.code_postrun()
@@ -168,7 +186,8 @@ extern "C" int run() {{
             namespace=namespace, varclass=varclass, vardef=vardef,
             h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
             devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
-            postrun=postrun, tail=tail)
+            postrun=postrun, tail=tail, struct=struct, function=function,
+            varglobal=varglobal)
 
         fname = hashlib.md5(code.encode("utf-8")).hexdigest()[:10]
 
@@ -180,14 +199,16 @@ extern "C" int run() {{
         # TODO : automated compiler option selection
         # TODO : retry compilation for debug and performance optimization
 
-        compiler = self.get_compiler(self.name)[2]
+        compiler = self.get_compiler()
         if compiler is None:
             raise Exception("Compiler is not available.")
 
         libpath = os.path.join(self.workdir, fname + "." + self.libext)
-        cmd = "%s %s -o %s %s" % (compiler.get_path(), compiler.get_option(),
-                libpath, codepath)
 
+        options = compiler.get_option()
+        cmd = "%s %s -o %s %s" % (compiler.path, options, libpath, codepath)
+
+        import pdb; pdb.set_trace()
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
         #import pdb; pdb.set_trace()
@@ -281,12 +302,11 @@ def select_engine(engine, order):
 
     if len(_installed_engines) == 0:
         from errand.cuda_hip import CudaEngine, HipEngine
-        from errand.pthread import PThreadCPPEngine, PThreadCEngine
+        from errand.pthread import PThreadEngine
 
         _installed_engines[CudaEngine.name] = CudaEngine
         _installed_engines[HipEngine.name] = HipEngine
-        _installed_engines[PThreadCPPEngine.name] = PThreadCPPEngine
-        _installed_engines[PThreadCEngine.name] = PThreadCEngine
+        _installed_engines[PThreadEngine.name] = PThreadEngine
 
     candidate = None
 

@@ -28,6 +28,10 @@ class Section(object):
             appeval(self.attr["enable"], env)[0])
 
 
+class HeaderSection(Section):
+    pass
+
+
 class SignatureSection(Section):
 
     def get_argnames(self):
@@ -49,7 +53,11 @@ class SignatureSection(Section):
 
 class SectionList(object):
 
-    def __init__(self, secs=[]):
+    def __init__(self, secs=None):
+
+        if secs is None:
+            secs = []
+
         self.sections = secs
 
     def select_one(self, env):
@@ -76,27 +84,28 @@ class Order(object):
         self._env = env
 
         if isinstance(order, Order):
+            self.header = order.header
             self.sections = order.sections
 
         elif os.path.isfile(order):
 
             with open(order) as fd:
-                self.sections = self._parse(fd.readlines())
+                self.header, self.sections = self._parse(fd.readlines())
 
         elif isinstance(order, str):
-            self.sections = self._parse(order.split("\n"))
+            self.header, self.sections = self._parse(order.split("\n"))
 
         else:
             raise Exception("Wrong order: %s" % str(order))
 
-        if self.sections["_header_"].body:
-            val, lenv = appeval(str(self.sections["_header_"]), self._env)
+        if self.header.body:
+            val, lenv = appeval(str(self.header), self._env)
             self._env.update(lenv)
 
     def _parse(self, lines):
 
-        header = None
-        sections = {"_header_": Section("", None, [])}
+        header = HeaderSection("", None, [])
+        sections = {}
 
         stage = 0
         buf = []
@@ -107,7 +116,7 @@ class Order(object):
             if line and line[0] == "[":
                 if stage == 0:
                     if buf:
-                        sections["_header_"].body.extend(buf)
+                        header.body.extend(buf)
 
                     stage = 1
 
@@ -135,7 +144,7 @@ class Order(object):
 
         if buf:
             if stage == 0:
-                sections["_header_"].body.extend(buf)
+                header.body.extend(buf)
 
             elif stage == 1:
                 for name, arg, attr, body in self._parse_section(buf):
@@ -152,7 +161,7 @@ class Order(object):
                     else:
                         slist.sections.append(Section(arg, attr, body))
 
-        return sections
+        return header, sections
 
     def _parse_section(self, lines):
 
@@ -274,9 +283,5 @@ class Order(object):
 
     def get_section(self, name):
 
-        for name, slist in self.sections.items():
-
-            sec = slist.select_one(self._env)
-
-            if sec is not None:
-                return sec
+        if name in self.sections:
+            return self.sections[name].select_one(self._env)

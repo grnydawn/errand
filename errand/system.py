@@ -24,11 +24,28 @@ class CPUSystem(System):
     def isavail(self):
         return True
 
+class NvidiaGPUSystem(System):
+
+    def isavail(self):
+        return True
+
+
+class AmdGPUSystem(System):
+
+    def isavail(self):
+        return True
+
 
 def select_system(name):
 
     if name == "cpu":
         return CPUSystem()
+
+    elif name == "nvidia-gpu":
+        return NvidiaGPUSystem()
+
+    elif name == "amd-gpu":
+        return AmdGPUSystem()
 
     else:
         raise Exception("Unknown system: %s" % name)

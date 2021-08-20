@@ -2,7 +2,7 @@
 
 """
 
-import abc
+import os, abc
 
 from errand.util import which
 
@@ -17,7 +17,6 @@ class Compiler(abc.ABC):
         self.path = path
 
     def isavail(self):
-        import pdb; pdb.set_trace()
         return self.path is not None and os.path.isfile(self.path)
 
     @abc.abstractmethod
@@ -37,28 +36,57 @@ class CPP_Compiler(C_Compiler):
         super(CPP_Compiler, self).__init__(path)
 
 
-class GNU_C_Compiler(C_Compiler):
+class GNU_CPP_Compiler(CPP_Compiler):
 
     def __init__(self, path=None):
 
         if path is None:
-            path = which("gcc")
+            path = which("g++")
 
-        super(GNU_C_Compiler, self).__init__(path)
+        super(GNU_CPP_Compiler, self).__init__(path)
 
     def get_option(self):
-        return ""
+        return "-shared -fPIC"
+
+
+class CUDA_CPP_Compiler(CPP_Compiler):
+
+    def __init__(self, path=None):
+
+        if path is None:
+            path = which("nvcc")
+
+        super(CUDA_CPP_Compiler, self).__init__(path)
+
+    def get_option(self):
+        #return "--compiler-options '-fPIC' --shared -std=c++11"
+        return "--compiler-options '-fPIC' --shared"
+
+class HIP_CPP_Compiler(CPP_Compiler):
+
+    def __init__(self, path=None):
+
+        if path is None:
+            path = which("hipcc")
+
+        super(HIP_CPP_Compiler, self).__init__(path)
+
+    def get_option(self):
+        return "-fPIC --shared"
 
 
 class Compilers(object):
 
     def __init__(self, engine):
 
-        if engine == "c":
-            self.clist =  [GNU_C_Compiler()]
+        if engine == "pthread":
+            self.clist =  [GNU_CPP_Compiler()]
 
-        elif engine == "c++":
-            self.clist =  []
+        elif engine == "cuda":
+            self.clist =  [CUDA_CPP_Compiler()]
+
+        elif engine == "hip":
+            self.clist =  [HIP_CPP_Compiler()]
 
         else:
             raise Exception("Compiler for '%s' is not supported." % engine)
