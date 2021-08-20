@@ -12,6 +12,48 @@ from ctypes import c_int, c_longlong, c_float, c_double, c_size_t
 
 _installed_engines = {}
 
+varclass_template = """
+class {vartype} {{
+public:
+    {dtype} * data;
+    int * _attrs; // ndim, itemsize, size, shape, strides
+
+    {funcprefix} {dtype}& operator() ({oparg}) {{
+        int * s = &(_attrs[3+_attrs[0]]);
+        return data[{offset}];
+    }}
+    {funcprefix} {dtype} operator() ({oparg}) const {{
+        int * s = &(_attrs[3+_attrs[0]]);
+        return data[{offset}];
+    }}
+
+    {funcprefix} int ndim() {{
+        return _attrs[0];
+    }}
+    {funcprefix} int itemsize() {{
+        return _attrs[1];
+    }}
+    {funcprefix} int size() {{
+        return _attrs[2];
+    }}
+    {funcprefix} int shape(int dim) {{
+        return _attrs[3+dim];
+    }}
+    {funcprefix} int stride(int dim) {{
+        return _attrs[3+_attrs[0]+dim];
+    }}
+    {funcprefix} int unravel_index(int tid, int dim) {{
+        int q, r=tid;
+        for (int i = 0; i < dim + 1; i++) {{
+            q = r / stride(i);
+            r = r % stride(i);
+        }}
+        return q;
+    }}
+}};
+"""
+
+
 class Engine(abc.ABC):
     """Errand Engine class
 
@@ -316,10 +358,13 @@ def select_engine(engine, order):
     if candidate is None and isinstance(engine, str):
         if engine in _installed_engines:
             candidate = _installed_engines[engine]
+        else:
+            raise Exception("%s engine is not installed." % str(engine))
 
     selected = []
+    targets = order.get_targetnames()
 
-    for tname in order.get_targetnames():
+    for tname in targets:
         if tname in _installed_engines:
             tempeng = _installed_engines[tname]
 
@@ -335,7 +380,10 @@ def select_engine(engine, order):
                     "is not found on this system.") %
                     ", ".join(_installed_engines.keys()))
 
+        elif candidate is not None:
+            raise Exception("No errand order for the engine: %s" % str(engine))
+
         else:
-            raise Exception("%s engine is not available." % str(engine))
+            raise Exception("Unknown engine: %s" % str(engine))
     else:
         return selected

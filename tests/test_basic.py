@@ -5,12 +5,12 @@ import pytest
 from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
+#test_engines = ["cuda", "hip", "pthread"]
+test_engines = ["hip", "pthread"]
+#test_engines = ["pthread"]
 
-@pytest.mark.parametrize("engine", ["cuda", "hip", "pthread"])
-#@pytest.mark.parametrize("engine", ["cuda"])
-#@pytest.mark.parametrize("engine", ["hip"])
-#@pytest.mark.parametrize("engine", ["pthread"])
-def test_vecadd1d(engine):
+@pytest.mark.parametrize("engine", test_engines)
+def ttest_vecadd1d(engine):
 
     N = 100
 
@@ -55,9 +55,11 @@ def test_vecadd1d(engine):
     assert c.sum() == a.sum() + b.sum()
     #assert reduced_c == a.sum() + b.sum()
 
-def Ttest_vecadd2d():
+@pytest.mark.parametrize("engine", test_engines)
+def test_vecadd2d(engine):
 
-    NROW, NCOL = 2000, 300
+    #NROW, NCOL = 2000, 300
+    NROW, NCOL = 20, 3
 
     a = np.ones((NROW, NCOL))
     b = np.ones((NROW, NCOL))
@@ -65,7 +67,7 @@ def Ttest_vecadd2d():
 
     order = os.path.join(here, "res", "vecadd2d.ord")
 
-    with Errand(order, timeout=5) as erd:
+    with Errand(order, engine=engine, timeout=5) as erd:
         gofers = erd.gofers(NROW, NCOL)
 
         workshop = erd.workshop(a, b, "->", c)
@@ -74,7 +76,8 @@ def Ttest_vecadd2d():
 
     assert np.array_equal(c, a+b)
 
-def Ttest_listadd2d():
+@pytest.mark.parametrize("engine", test_engines)
+def test_listadd2d(engine):
 
     NROW = 2
     NCOL = 3
@@ -85,7 +88,7 @@ def Ttest_listadd2d():
 
     order = os.path.join(here, "res", "vecadd2d.ord")
 
-    with Errand(order, timeout=5) as erd:
+    with Errand(order, engine=engine, timeout=5) as erd:
         gofers = erd.gofers(NROW, NCOL)
 
         workshop = erd.workshop(a, b, "->", c)

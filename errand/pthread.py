@@ -5,44 +5,11 @@
 
 import os
 
-from errand.engine import Engine
+from errand.engine import Engine, varclass_template
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
 
-varclass_template = """
-class {vartype} {{
-public:
-    {dtype} * data;
-    int * _attrs; // ndim, itemsize, size, shape, strides
-
-    {funcprefix} {dtype}& operator() ({oparg}) {{
-        int * s = &(_attrs[3+_attrs[0]]);
-        return data[{offset}];
-    }}
-    {funcprefix} {dtype} operator() ({oparg}) const {{
-        int * s = &(_attrs[3+_attrs[0]]);
-        //int s = 3+_attrs[0];
-        return data[{offset}];
-    }}
-
-    {funcprefix} int ndim() {{
-        return _attrs[0];
-    }}
-    {funcprefix} int itemsize() {{
-        return _attrs[1];
-    }}
-    {funcprefix} int size() {{
-        return _attrs[2];
-    }}
-    {funcprefix} int shape(int dim) {{
-        return _attrs[3+dim];
-    }}
-    {funcprefix} int stride(int dim) {{
-        return _attrs[3+_attrs[0]+dim];
-    }}
-}};
-"""
 
 struct_template = """
 typedef struct arguments {{
@@ -270,7 +237,7 @@ class PThreadEngine(Engine):
             argdef.append("host_%s_dim%s %s = host_%s_dim%s();" % (dname, ndim, arg["curname"], dname, ndim))
             argassign.append("%s = *(args->data->host_%s);" % (arg["curname"], arg["curname"]))
 
-        argassign.append("int ERRAND_TID = args->tid;")
+        argassign.append("int ERRAND_THREAD_ID = args->tid;")
 
         return devfunc_template.format(argdef="\n".join(argdef), body=body,
                     argassign="\n".join(argassign))

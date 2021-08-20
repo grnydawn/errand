@@ -5,7 +5,7 @@
 
 import os
 
-from errand.engine import Engine
+from errand.engine import Engine, varclass_template
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
@@ -18,39 +18,6 @@ from errand.util import which
 # TODO: send data and array of attributes to an internal variable of generated struct
 #       the attribute array will be interpreted within the struct to various info
 
-
-varclass_template = """
-class {vartype} {{
-public:
-    {dtype} * data;
-    int * _attrs; // ndim, itemsize, size, shape, strides
-
-    {funcprefix} {dtype}& operator() ({oparg}) {{
-        int * s = &(_attrs[3+_attrs[0]]);
-        return data[{offset}];
-    }}
-    {funcprefix} {dtype} operator() ({oparg}) const {{
-        int * s = &(_attrs[3+_attrs[0]]);
-        return data[{offset}];
-    }}
-
-    {funcprefix} int ndim() {{
-        return _attrs[0];
-    }}
-    {funcprefix} int itemsize() {{
-        return _attrs[1];
-    }}
-    {funcprefix} int size() {{
-        return _attrs[2];
-    }}
-    {funcprefix} int shape(int dim) {{
-        return _attrs[3+dim];
-    }}
-    {funcprefix} int stride(int dim) {{
-        return _attrs[3+_attrs[0]+dim];
-    }}
-}};
-"""
 
 host_vardef_template = """
 {vartype} {varname} = {vartype}();
