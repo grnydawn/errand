@@ -6,8 +6,8 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-#@pytest.mark.parametrize("engine", ["cuda", "hip", "pthread"])
-@pytest.mark.parametrize("engine", ["cuda"])
+@pytest.mark.parametrize("engine", ["cuda", "hip", "pthread"])
+#@pytest.mark.parametrize("engine", ["cuda"])
 #@pytest.mark.parametrize("engine", ["hip"])
 #@pytest.mark.parametrize("engine", ["pthread"])
 def test_vecadd1d(engine):
