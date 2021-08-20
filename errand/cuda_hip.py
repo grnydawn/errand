@@ -3,13 +3,11 @@
 
 """
 
-import os, sys, abc
-import subprocess as subp
-
-from numpy import double
-from numpy.ctypeslib import load_library
+import os
 
 from errand.engine import Engine
+from errand.compiler import Compilers
+from errand.system import select_system
 from errand.util import which
 
 # key ndarray attributes
@@ -33,7 +31,6 @@ public:
     }}
     {funcprefix} {dtype} operator() ({oparg}) const {{
         int * s = &(_attrs[3+_attrs[0]]);
-        //int s = 3+_attrs[0];
         return data[{offset}];
     }}
 
@@ -160,9 +157,10 @@ calldevmain_template = """
 
 class CudaHipEngine(Engine):
 
-    def __init__(self, workdir):
+    def __init__(self, workdir, compilers, targetsystem):
 
-        super(CudaHipEngine, self).__init__(workdir)
+        super(CudaHipEngine, self).__init__(workdir, compilers,
+                targetsystem)
 
     def getname_h2dcopy(self, arg):
 
@@ -250,7 +248,7 @@ class CudaHipEngine(Engine):
     def code_devfunc(self):
 
         args = []
-        body = "\n".join(self.order.get_section(self.name)[2])
+        body = str(self.order.get_section(self.name))
 
         for arg in self.inargs+self.outargs:
 
@@ -317,9 +315,6 @@ class CudaHipEngine(Engine):
         return calldevmain_template.format(ngrids=str(self.nteams),
                 nthreads=str(self.nmembers), args=", ".join(args))
 
-    def compiler_path(self):
-        return self.compiler
-
 
 class CudaEngine(CudaHipEngine):
 
@@ -329,43 +324,20 @@ class CudaEngine(CudaHipEngine):
 
     def __init__(self, workdir):
 
-        super(CudaEngine, self).__init__(workdir)
+        compilers = Compilers(self.name)
+        targetsystem = select_system("nvidia-gpu")
 
-        compiler = which("nvcc")
-        if compiler is None or not self.isavail():
-            raise Exception("nvcc is not found")
-
-        self.compiler = os.path.realpath(compiler)
-        self.option = ""
-
-    def compiler_option(self):
-        return self.option + "--compiler-options '-fPIC' --shared"
-
-    @classmethod
-    def isavail(cls):
-
-        compiler = which("nvcc")
-        if compiler is None or not os.path.isfile(compiler):
-            return False
-
-        rootdir = os.path.join(os.path.dirname(compiler), "..")
-
-        incdir = os.path.join(rootdir, "include")
-        if not os.path.isdir(incdir):
-            return False
-
-        libdir = os.path.join(rootdir, "lib64")
-        if not os.path.isdir(libdir):
-            libdir = os.path.join(rootdir, "lib")
-
-            if not os.path.isdir(libdir):
-                return False
-
-        return True
+        super(CudaEngine, self).__init__(workdir, compilers,
+            targetsystem)
 
     def code_header(self):
 
-        return  "#include <stdexcept>"
+        return  """
+#include <stdexcept>
+#include "string.h"
+#include "stdlib.h"
+#include "stdio.h"
+"""
 
     def get_template(self, name):
 
@@ -378,12 +350,6 @@ class CudaEngine(CudaHipEngine):
         elif name == "d2hcopy":
             return cuda_d2hcopy_template
 
-    def code_header(self):
-
-        out = """#include "stdio.h"
-"""
-        return out
-
 
 class HipEngine(CudaHipEngine):
 
@@ -393,39 +359,11 @@ class HipEngine(CudaHipEngine):
 
     def __init__(self, workdir):
 
-        super(HipEngine, self).__init__(workdir)
+        compilers = Compilers(self.name)
+        targetsystem = select_system("amd-gpu")
 
-        compiler = which("hipcc")
-        if compiler is None or not self.isavail():
-            raise Exception("hipcc is not found")
-
-        self.compiler = os.path.realpath(compiler)
-        self.option = ""
-
-    def compiler_option(self):
-        return self.option + " -fPIC --shared -O0"
-
-    @classmethod
-    def isavail(cls):
-
-        compiler = which("hipcc")
-        if compiler is None or not os.path.isfile(compiler):
-            return False
-
-        rootdir = os.path.join(os.path.dirname(compiler), "..")
-
-        incdir = os.path.join(rootdir, "include")
-        if not os.path.isdir(incdir):
-            return False
-
-        libdir = os.path.join(rootdir, "lib64")
-        if not os.path.isdir(libdir):
-            libdir = os.path.join(rootdir, "lib")
-
-            if not os.path.isdir(libdir):
-                return False
-
-        return True
+        super(HipEngine, self).__init__(workdir, compilers,
+            targetsystem)
 
     def code_header(self):
 

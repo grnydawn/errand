@@ -32,7 +32,9 @@ class Workshop(object):
 
         self.engine.h2dcopy(self.inargs, self.outargs)
 
-        return self.code.run()
+        res = self.code.run()
+
+        return res
 
     # assumes that code.run() is async
     def close(self, timeout=None):
@@ -42,4 +44,6 @@ class Workshop(object):
 
             time.sleep(0.1)
 
-        self.engine.d2hcopy(self.outargs)
+        res = self.engine.d2hcopy(self.outargs)
+
+        return res

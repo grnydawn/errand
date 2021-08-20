@@ -1,11 +1,16 @@
 """Errand test file"""
 
 import os, numpy as np
+import pytest
 from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-def test_vecadd1d():
+@pytest.mark.parametrize("engine", ["cuda", "hip", "pthread"])
+#@pytest.mark.parametrize("engine", ["cuda"])
+#@pytest.mark.parametrize("engine", ["hip"])
+#@pytest.mark.parametrize("engine", ["pthread"])
+def test_vecadd1d(engine):
 
     N = 100
 
@@ -22,7 +27,7 @@ def test_vecadd1d():
     # include attrs of workshop like engine, ncores, nthreads/core, memory, ...
     # hip or cuda engine
     #with Errand(order, engine="hip") as erd:
-    with Errand(order, timeout=5) as erd:
+    with Errand(order, engine=engine, timeout=5) as erd:
 
         # hierachical settings: order -> context -> base
         # best-effort of guessing default settings
@@ -34,6 +39,7 @@ def test_vecadd1d():
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
         # logical worker entities
+        # TODO: how to choose the best configuration per engine
         gofers = erd.gofers(N)
 
         # workshop represents machine, input&output, order, and engine
@@ -49,7 +55,7 @@ def test_vecadd1d():
     assert c.sum() == a.sum() + b.sum()
     #assert reduced_c == a.sum() + b.sum()
 
-def test_vecadd2d():
+def Ttest_vecadd2d():
 
     NROW, NCOL = 2000, 300
 
@@ -68,7 +74,7 @@ def test_vecadd2d():
 
     assert np.array_equal(c, a+b)
 
-def test_listadd2d():
+def Ttest_listadd2d():
 
     NROW = 2
     NCOL = 3

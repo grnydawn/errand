@@ -26,9 +26,15 @@ class Engine(abc.ABC):
 
 {varclass}
 
+{struct}
+
 int isfinished = 0;
 
 {vardef}
+
+{varglobal}
+
+{function}
 
 {h2dcopyfunc}
 
@@ -63,7 +69,7 @@ extern "C" int run() {{
         "float64": ["double", c_double]
     }
 
-    def __init__(self, workdir):
+    def __init__(self, workdir, compilers, targetsystem):
 
         self.workdir = workdir
         self.sharedlib = None
@@ -72,11 +78,17 @@ extern "C" int run() {{
         self.inargs = None
         self.outargs = None
         self.order = None
+        self.compilers = compilers
+        self.hostsystem = None
+        self.targetsystem = targetsystem
 
-    @classmethod
-    @abc.abstractmethod
-    def isavail(cls):
-        pass
+    def isavail(self):
+        return (self.compilers is not None and self.compilers.isavail() and
+                self.targetsystem is not None and self.targetsystem.isavail())
+
+    def get_compiler(self):
+        
+        return self.compilers.select_one()
 
     def code_top(self):
         return ""
@@ -90,7 +102,13 @@ extern "C" int run() {{
     def code_varclass(self):
         return ""
 
+    def code_struct(self):
+        return ""
+
     def code_vardef(self):
+        return ""
+
+    def code_varglobal(self):
         return ""
 
     def code_h2dcopyfunc(self):
@@ -102,6 +120,9 @@ extern "C" int run() {{
     @abc.abstractmethod
     def code_devfunc(self):
         pass
+
+    def code_function(self):
+        return ""
 
     def code_prerun(self):
         return ""
@@ -116,16 +137,8 @@ extern "C" int run() {{
     def code_tail(self):
         return ""
 
-    @abc.abstractmethod
-    def compiler_path(self):
-        pass
-
     def getname_argpair(self, arg):
         return (arg["data"].ndim, self.getname_ctype(arg))
-
-    @abc.abstractmethod
-    def compiler_option(self):
-        pass
 
     def get_ctype(self, arg):
        
@@ -157,10 +170,13 @@ extern "C" int run() {{
         header = self.code_header()
         namespace = self.code_namespace()
         varclass = self.code_varclass()
+        struct = self.code_struct()
         vardef = self.code_vardef()
+        varglobal = self.code_varglobal()
         h2dcopyfunc = self.code_h2dcopyfunc()
         d2hcopyfunc = self.code_d2hcopyfunc()
         devfunc = self.code_devfunc()
+        function = self.code_function()
         prerun = self.code_prerun()
         calldevmain = self.code_calldevmain()
         postrun = self.code_postrun()
@@ -170,7 +186,8 @@ extern "C" int run() {{
             namespace=namespace, varclass=varclass, vardef=vardef,
             h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
             devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
-            postrun=postrun, tail=tail)
+            postrun=postrun, tail=tail, struct=struct, function=function,
+            varglobal=varglobal)
 
         fname = hashlib.md5(code.encode("utf-8")).hexdigest()[:10]
 
@@ -182,10 +199,16 @@ extern "C" int run() {{
         # TODO : automated compiler option selection
         # TODO : retry compilation for debug and performance optimization
 
-        libpath = os.path.join(self.workdir, fname + "." + self.libext)
-        cmd = "%s %s -o %s %s" % (self.compiler_path(), self.compiler_option(),
-                libpath, codepath)
+        compiler = self.get_compiler()
+        if compiler is None:
+            raise Exception("Compiler is not available.")
 
+        libpath = os.path.join(self.workdir, fname + "." + self.libext)
+
+        options = compiler.get_option()
+        cmd = "%s %s -o %s %s" % (compiler.path, options, libpath, codepath)
+
+        #import pdb; pdb.set_trace()
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
         #import pdb; pdb.set_trace()
@@ -279,24 +302,40 @@ def select_engine(engine, order):
 
     if len(_installed_engines) == 0:
         from errand.cuda_hip import CudaEngine, HipEngine
+        from errand.pthread import PThreadEngine
 
         _installed_engines[CudaEngine.name] = CudaEngine
         _installed_engines[HipEngine.name] = HipEngine
+        _installed_engines[PThreadEngine.name] = PThreadEngine
+
+    candidate = None
 
     if isinstance(engine, Engine):
-        return engine.__class__
+        candidate = engine.__class__
 
-    if isinstance(engine, str):
+    if candidate is None and isinstance(engine, str):
         if engine in _installed_engines:
-            return _installed_engines[engine]
-    else:
-        for tname in order.get_targetnames():
-            if tname in _installed_engines and _installed_engines[tname].isavail():
-                return _installed_engines[tname]
+            candidate = _installed_engines[engine]
 
-    if engine is None:
-        raise Exception("A compiler for any of these errand engines (%s) is not found on this system."
-                % ", ".join(_installed_engines.keys()))
+    selected = []
 
+    for tname in order.get_targetnames():
+        if tname in _installed_engines:
+            tempeng = _installed_engines[tname]
+
+            if candidate is not None:
+                if candidate is tempeng:
+                    selected.append(tempeng)
+            else:
+                selected.append(tempeng)
+
+    if len(selected) == 0:
+        if engine is None:
+            raise Exception(("A compiler for any of these errand engines (%s)"
+                    "is not found on this system.") %
+                    ", ".join(_installed_engines.keys()))
+
+        else:
+            raise Exception("%s engine is not available." % str(engine))
     else:
-        raise Exception("%s engine is not available." % str(engine))
+        return selected
