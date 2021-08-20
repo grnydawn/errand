@@ -111,6 +111,7 @@ venv3/
 venv36h/
 venv37/
 venv38/
+venv38.old/
 venv38s/
 venvs/
 ENV/
@@ -140,3 +141,4 @@ core
 old
 *.exe
 *.so
+a.out
