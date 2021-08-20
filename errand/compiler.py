@@ -59,8 +59,8 @@ class CUDA_CPP_Compiler(CPP_Compiler):
         super(CUDA_CPP_Compiler, self).__init__(path)
 
     def get_option(self):
-        #return "--compiler-options '-fPIC' --shared -std=c++11"
         return "--compiler-options '-fPIC' --shared"
+
 
 class HIP_CPP_Compiler(CPP_Compiler):
 

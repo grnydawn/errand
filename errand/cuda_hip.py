@@ -138,13 +138,8 @@ extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
 
 cuda_d2hcopy_template = """
 extern "C" int {name}(void * data) {{
-    //{dtype} * xx;
-    //xx = ({dtype} *) data;
-    //xx[0] = 1.0;
 
     cudaMemcpy(data, {dvar}.data, {hvar}.size() * sizeof({dtype}), cudaMemcpyDeviceToHost);
-
-    //xx[0] = 1.0;
 
     return 0;
 }}

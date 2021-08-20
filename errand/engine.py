@@ -208,7 +208,7 @@ extern "C" int run() {{
         options = compiler.get_option()
         cmd = "%s %s -o %s %s" % (compiler.path, options, libpath, codepath)
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
 
         #import pdb; pdb.set_trace()
