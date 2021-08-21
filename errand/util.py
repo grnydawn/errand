@@ -2,6 +2,7 @@
 
 import os, ast
 from collections import OrderedDict
+import subprocess as subp
 
 exclude_list = ["exec", "eval", "breakpoint", "memoryview"]
 
@@ -107,4 +108,11 @@ def parse_literal_args(expr):
     #    lv.append(expr)
 
     return lv, lk
+
+
+def shellcmd(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE,
+             check=False): 
+
+    return subp.run(cmd, shell=shell, stdout=stdout, stderr=stderr,
+                    check=check)
 

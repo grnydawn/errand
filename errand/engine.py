@@ -4,11 +4,11 @@
 """
 
 import os, sys, abc, hashlib
-import subprocess as subp
 import numpy as np
 from numpy.ctypeslib import ndpointer, load_library
 from ctypes import c_int, c_longlong, c_float, c_double, c_size_t
 
+from errand.util import shellcmd
 
 _installed_engines = {}
 
@@ -250,8 +250,12 @@ extern "C" int run() {{
         options = compiler.get_option()
         cmd = "%s %s -o %s %s" % (compiler.path, options, libpath, codepath)
 
-        #import pdb; pdb.set_trace()
-        out = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, check=False)
+        import pdb; pdb.set_trace()
+        out = shellcmd(cmd)
+
+        if out.returncode  != 0:
+            print(out.stderr)
+            sys.exit(out.returncode)
 
         #import pdb; pdb.set_trace()
         if out.returncode  != 0:
@@ -345,10 +349,12 @@ def select_engine(engine, order):
     if len(_installed_engines) == 0:
         from errand.cuda_hip import CudaEngine, HipEngine
         from errand.pthread import PThreadEngine
+        from errand.openacc import OpenAccCppEngine
 
         _installed_engines[CudaEngine.name] = CudaEngine
         _installed_engines[HipEngine.name] = HipEngine
         _installed_engines[PThreadEngine.name] = PThreadEngine
+        _installed_engines[OpenAccCppEngine.name] = OpenAccCppEngine
 
     candidate = None
 
