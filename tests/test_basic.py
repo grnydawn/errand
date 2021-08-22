@@ -69,9 +69,33 @@ def test_vecadd2d(engine):
     order = os.path.join(here, "res", "vecadd2d.ord")
 
     with Errand(order, engine=engine, timeout=5) as erd:
-        gofers = erd.gofers(NROW, NCOL)
 
         workshop = erd.workshop(a, b, "->", c)
+
+        gofers = erd.gofers(NROW, NCOL)
+
+        gofers.run(workshop)
+
+    assert np.array_equal(c, a+b)
+
+
+@pytest.mark.parametrize("engine", test_engines)
+def ttest_vecadd3d(engine):
+
+    #NROW, NCOL = 2000, 300
+    X, Y, Z = 10, 3, 2
+
+    a = np.ones((X, Y, Z))
+    b = np.ones((X, Y, Z))
+    c = np.zeros((X, Y, Z))
+
+    order = os.path.join(here, "res", "vecadd3d.ord")
+
+    with Errand(order, engine=engine, timeout=5) as erd:
+
+        workshop = erd.workshop(a, b, "->", c)
+
+        gofers = erd.gofers(X, (Y, Z))
 
         gofers.run(workshop)
 
