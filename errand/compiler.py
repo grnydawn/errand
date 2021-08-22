@@ -64,7 +64,7 @@ class OpenAcc_GNU_CPP_Compiler(GNU_CPP_Compiler):
 
     def get_option(self):
 
-        return ("-fopenacc " +
+        return ("-fopenacc -pthread " +
                 super(OpenAcc_GNU_CPP_Compiler, self).get_option())
 
 

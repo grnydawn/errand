@@ -249,11 +249,11 @@ extern "C" int run() {{
         options = compiler.get_option()
         cmd = "%s %s -o %s %s" % (compiler.path, options, libpath, codepath)
 
-        #import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         out = shellcmd(cmd)
 
         if out.returncode  != 0:
-            print(out.stderr)
+            print(out.stderr.decode())
             sys.exit(out.returncode)
 
         #import pdb; pdb.set_trace()

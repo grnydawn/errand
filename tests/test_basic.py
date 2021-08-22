@@ -7,8 +7,8 @@ from errand import Errand
 here = os.path.dirname(os.path.abspath(__file__))
 #test_engines = ["cuda", "hip", "pthread"]
 #test_engines = ["hip", "pthread"]
-test_engines = ["pthread"]
-#test_engines = ["openacc-c++"]
+#test_engines = ["pthread"]
+test_engines = ["openacc-c++"]
 
 @pytest.mark.parametrize("engine", test_engines)
 def ttest_vecadd1d(engine):
@@ -60,7 +60,7 @@ def ttest_vecadd1d(engine):
 def test_vecadd2d(engine):
 
     #NROW, NCOL = 2000, 300
-    NROW, NCOL = 20, 3
+    NROW, NCOL = 10, 3
 
     a = np.ones((NROW, NCOL))
     b = np.ones((NROW, NCOL))

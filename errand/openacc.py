@@ -19,6 +19,7 @@ typedef struct arguments {{
 typedef struct wrap_args {{
     ARGSTYPE * data;
     int tid;
+    int state;
 }} WRAPARGSTYPE;
 """
 
@@ -32,7 +33,7 @@ ARGSTYPE struct_args = {{
 }};
 """
 
-acc_c_h2dcopy_template = """
+h2dcopy_template = """
 extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
 
     {hvar}.data = ({dtype} *) data;
@@ -43,7 +44,7 @@ extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
 }}
 """
 
-acc_c_h2dmalloc_template = """
+h2dmalloc_template = """
 extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
 
     {hvar}.data = ({dtype} *) data;
@@ -54,7 +55,7 @@ extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
 }}
 """
 
-acc_c_d2hcopy_template = """
+d2hcopy_template = """
 extern "C" int {name}(void * data) {{
 
     return 0;
@@ -67,23 +68,48 @@ void * _kernel(void * ptr){{
 
     WRAPARGSTYPE * args = (WRAPARGSTYPE *)ptr;
 
+    args->state = 1;
+
     {argassign}
 
+#pragma acc enter data create({creates})
+#pragma acc update device({dev_updates})
+
+#pragma acc parallel num_gangs({ngangs}) num_workers({nworkers}) \
+vector_length({veclen})
+{{
     {body}
+}}
+
+#pragma acc update self ({host_updates})
+#pragma acc end data delete({deletes})
+
+    args->state = 2;
+
+    isfinished = 1;
 }}
 """
 
-
 calldevmain_template = """
 
-#pragma acc enter data {copyin} {create}
+    pthread_t thread;
+    WRAPARGSTYPE args;
 
-#pragma acc parallel
-{{
-{body}
-}}
+    pthread_attr_t attr;
 
-#pragma acc exit data {copyout}
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+    args.tid = 0;
+    args.state = 0;
+    args.data = &struct_args;
+
+    pthread_create(&thread, &attr, _kernel, &args);
+
+    while (args.state == 0) {{
+        do {{ }} while(0);
+    }}
+
 """
 
 class OpenAccCppEngine(Engine):
@@ -108,6 +134,7 @@ class OpenAccCppEngine(Engine):
         return  """
 #include <pthread.h>
 #include <errno.h>
+#include <unistd.h>
 #include "string.h"
 #include "stdlib.h"
 #include "stdio.h"
@@ -218,6 +245,10 @@ class OpenAccCppEngine(Engine):
 
         argdef = []
         argassign = []
+        creates = []
+        deletes = []
+        host_updates = []
+        dev_updates = []
 
         body = str(self.order.get_section(self.name))
 
@@ -225,13 +256,41 @@ class OpenAccCppEngine(Engine):
 
             ndim, dname = self.getname_argpair(arg)
 
-            argdef.append("host_%s_dim%s %s = host_%s_dim%s();" % (dname, ndim, arg["curname"], dname, ndim))
-            argassign.append("%s = *(args->data->host_%s);" % (arg["curname"], arg["curname"]))
+            argdef.append("host_%s_dim%s %s = host_%s_dim%s();" %
+                    (dname, ndim, arg["curname"], dname, ndim))
+            argassign.append("%s = *(args->data->host_%s);" %
+                    (arg["curname"], arg["curname"]))
+            accstr = ("{name}.data[0:{name}._attrs[2]], "
+                "{name}._attrs[0:{name}._attrs[2]]").format(name=arg["curname"])
+            creates.append(accstr)
+            deletes.append("{name}.data, {name}._attrs".format(name=arg["curname"]))
+
+        for arg in self.inargs:
+
+            ndim, dname = self.getname_argpair(arg)
+
+            accstr = ("{name}.data[0:{name}._attrs[2]], "
+                "{name}._attrs[0:{name}._attrs[2]]").format(name=arg["curname"])
+
+            dev_updates.append(accstr)
+
+        for arg in self.outargs:
+
+            ndim, dname = self.getname_argpair(arg)
+
+            host_updates.append("host_{name}.data[0:host_{name}._attrs[2]]".
+                format(name=arg["curname"]))
 
         argassign.append("int ERRAND_THREAD_ID = args->tid;")
 
         return devfunc_template.format(argdef="\n".join(argdef), body=body,
-                    argassign="\n".join(argassign))
+                    argassign="\n".join(argassign),
+                    creates=", \\\n".join(creates),
+                    dev_updates=", \\\n".join(dev_updates),
+                    host_updates=", \\\n".join(host_updates),
+                    deletes=", \\\n".join(deletes),
+                    ngangs=str(self.nteams), nworkers="1",
+                    veclen=str(self.nmembers))
 
     def code_h2dcopyfunc(self):
 
@@ -283,22 +342,17 @@ class OpenAccCppEngine(Engine):
 #
         # testing
         #args.append("1")
-        copyin = ""
-        copyout = ""
-        create = ""
-        body = ""
 
         return calldevmain_template.format(
-                nthreads=str(self.nteams * self.nmembers), copyin=copyin,
-                copyout=copyout, create=create, body=body)
+                nthreads=str(self.nteams * self.nmembers))
 
     def get_template(self, name):
 
         if name == "h2dcopy":
-            return acc_c_h2dcopy_template
+            return h2dcopy_template
 
         elif name == "h2dmalloc":
-            return acc_c_h2dmalloc_template
+            return h2dmalloc_template
 
         elif name == "d2hcopy":
-            return acc_c_d2hcopy_template
+            return d2hcopy_template

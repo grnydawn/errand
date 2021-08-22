@@ -116,14 +116,14 @@ calldevmain_template = """
         }}
     }}
 
+    pthread_create(&(threads[{nthreads}]), &attr, _join, &(args[0]));
+
     for (int i=0; i < {nthreads}; i++) {{
 
         while (args[i].state == 0) {{
             do {{ }} while(0);
         }}
     }}
-
-    pthread_create(&(threads[{nthreads}]), &attr, _join, &(args[0]));
 
 """
 

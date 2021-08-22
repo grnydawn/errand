@@ -282,6 +282,10 @@ class CudaHipEngine(Engine):
         return calldevmain_template.format(ngrids=str(self.nteams),
                 nthreads=str(self.nmembers), args=", ".join(args))
 
+    def code_postrun(self):
+        # NOTE: mark finished here; d2h copy will block until gpu run finish.
+        return "    isfinished = 1;";
+
 
 class CudaEngine(CudaHipEngine):
 
