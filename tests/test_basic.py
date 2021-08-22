@@ -6,9 +6,9 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 #test_engines = ["cuda", "hip", "pthread"]
-#test_engines = ["hip", "pthread"]
+test_engines = ["hip", "pthread", "openacc-c++"]
 #test_engines = ["pthread"]
-test_engines = ["openacc-c++"]
+#test_engines = ["openacc-c++"]
 
 @pytest.mark.parametrize("engine", test_engines)
 def ttest_vecadd1d(engine):

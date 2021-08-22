@@ -25,7 +25,7 @@ class Compiler(abc.ABC):
 
     @abc.abstractmethod
     def get_option(self):
-        pass
+        return ""
 
     def get_version(self):
         return shellcmd("%s --version" % self.path).stdout.decode()
@@ -47,24 +47,33 @@ class GNU_CPP_Compiler(CPP_Compiler):
         super(GNU_CPP_Compiler, self).__init__(path)
 
     def get_option(self):
-        return "-shared -fPIC"
-
-    def get_version(self):
-        ver = super(GNU_CPP_Compiler, self).get_version()
-        match = re_gcc_version.search(ver)
-        if match:
-            return  ver
+        return "-shared -fPIC " + super(GNU_CPP_Compiler, self).get_option()
 
 
-class OpenAcc_GNU_CPP_Compiler(GNU_CPP_Compiler):
+class Pthread_GNU_CPP_Compiler(GNU_CPP_Compiler):
+
+    def get_option(self):
+        return "-pthread " + super(Pthread_GNU_CPP_Compiler, self).get_option()
+
+
+class OpenAcc_GNU_CPP_Compiler(Pthread_GNU_CPP_Compiler):
 
     def __init__(self, path=None):
 
         super(OpenAcc_GNU_CPP_Compiler, self).__init__(path)
 
+        match = re_gcc_version.search(self.version)
+
+        if not match:
+            raise Exception("Can not parse GCC version string: %s" %
+                                str(self.version)) 
+        if int(match.group("major")) < 10:
+            raise Exception("Gcc version should be at least 10: %s" %
+                                str(self.version)) 
+
     def get_option(self):
 
-        return ("-fopenacc -pthread " +
+        return ("-fopenacc " +
                 super(OpenAcc_GNU_CPP_Compiler, self).get_option())
 
 
@@ -98,20 +107,31 @@ class Compilers(object):
 
     def __init__(self, engine):
 
+        self.clist = []
+
+        clist = []
+
         if engine == "pthread":
-            self.clist =  [GNU_CPP_Compiler()]
+            clist =  [Pthread_GNU_CPP_Compiler]
 
         elif engine == "cuda":
-            self.clist =  [CUDA_CPP_Compiler()]
+            clist =  [CUDA_CPP_Compiler]
 
         elif engine == "hip":
-            self.clist =  [HIP_CPP_Compiler()]
+            clist =  [HIP_CPP_Compiler]
 
         elif engine == "openacc-c++":
-            self.clist =  [OpenAcc_GNU_CPP_Compiler()]
+            clist =  [OpenAcc_GNU_CPP_Compiler]
 
         else:
             raise Exception("Compiler for '%s' is not supported." % engine)
+
+        for cls in clist:
+            try:
+                self.clist.append(cls())
+
+            except Exception as err:
+                pass
 
     def isavail(self):
 
