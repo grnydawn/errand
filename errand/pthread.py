@@ -272,7 +272,8 @@ class PThreadEngine(Engine):
 
             ndim, dname = self.getname_argpair(arg)
 
-            argdef.append("host_%s_dim%s %s = host_%s_dim%s();" % (dname, ndim, arg["curname"], dname, ndim))
+            #argdef.append("host_%s_dim%s %s = host_%s_dim%s();" % (dname, ndim, arg["curname"], dname, ndim))
+            argdef.append("host_%s_dim%s %s;" % (dname, ndim, arg["curname"]))
             argassign.append("%s = *(args->data->host_%s);" % (arg["curname"], arg["curname"]))
 
         argassign.append("int ERRAND_THREAD_ID = args->tid;")

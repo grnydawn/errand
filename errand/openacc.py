@@ -256,8 +256,10 @@ class OpenAccCppEngine(Engine):
 
             ndim, dname = self.getname_argpair(arg)
 
-            argdef.append("host_%s_dim%s %s = host_%s_dim%s();" %
-                    (dname, ndim, arg["curname"], dname, ndim))
+            #argdef.append("host_%s_dim%s %s = host_%s_dim%s();" %
+            #        (dname, ndim, arg["curname"], dname, ndim))
+            argdef.append("host_%s_dim%s %s;" %
+                    (dname, ndim, arg["curname"]))
             argassign.append("%s = *(args->data->host_%s);" %
                     (arg["curname"], arg["curname"]))
             accstr = ("{name}.data[0:{name}._attrs[2]], "
@@ -278,7 +280,7 @@ class OpenAccCppEngine(Engine):
 
             ndim, dname = self.getname_argpair(arg)
 
-            host_updates.append("host_{name}.data[0:host_{name}._attrs[2]]".
+            host_updates.append("{name}.data[0:{name}._attrs[2]]".
                 format(name=arg["curname"]))
 
         argassign.append("int ERRAND_THREAD_ID = args->tid;")

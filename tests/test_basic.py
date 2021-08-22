@@ -11,7 +11,7 @@ test_engines = ["hip", "pthread", "openacc-c++"]
 #test_engines = ["openacc-c++"]
 
 @pytest.mark.parametrize("engine", test_engines)
-def ttest_vecadd1d(engine):
+def test_vecadd1d(engine):
 
     N = 100
 
@@ -60,7 +60,7 @@ def ttest_vecadd1d(engine):
 def test_vecadd2d(engine):
 
     #NROW, NCOL = 2000, 300
-    NROW, NCOL = 10, 3
+    NROW, NCOL = 20, 3
 
     a = np.ones((NROW, NCOL))
     b = np.ones((NROW, NCOL))
@@ -90,9 +90,10 @@ def test_listadd2d(engine):
     order = os.path.join(here, "res", "vecadd2d.ord")
 
     with Errand(order, engine=engine, timeout=5) as erd:
-        gofers = erd.gofers(NROW, NCOL)
 
         workshop = erd.workshop(a, b, "->", c)
+
+        gofers = erd.gofers(NROW, NCOL)
 
         gofers.run(workshop)
 
