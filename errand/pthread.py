@@ -19,6 +19,7 @@ typedef struct arguments {{
 typedef struct wrap_args {{
     ARGSTYPE * data;
     int tid;
+    int state;
 }} WRAPARGSTYPE;
 """
 
@@ -67,32 +68,63 @@ void * _kernel(void * ptr){{
 
     WRAPARGSTYPE * args = (WRAPARGSTYPE *)ptr;
 
+    args->state = 1;
+
     {argassign}
 
     {body}
+
+    args->state = 2;
 }}
 """
 
+function_template = """
+void * _join(void * ptr){{
+
+    WRAPARGSTYPE * args = (WRAPARGSTYPE *) ptr;
+
+    for (int i=0; i < {nthreads}; i++) {{
+
+        while (args[i].state < 2) {{
+            sleep(0.001);
+        }}
+    }}
+
+    isfinished = 1;
+}}
+"""
 
 calldevmain_template = """
 
-    pthread_t threads[{nthreads}];
+    pthread_t threads[{nthreads}+1];
     WRAPARGSTYPE args[{nthreads}];
+
+    pthread_attr_t attr;
+
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
     for (int i=0; i < {nthreads}; i++) {{
 
         args[i].tid = i;
+        args[i].state = 0;
         args[i].data = &struct_args;
 
-        if (pthread_create(&(threads[i]), NULL, _kernel, &(args[i]))) {{
-            perror("ERROR");
-            exit(0);
+        if (pthread_create(&(threads[i]), &attr, _kernel, &(args[i]))) {{
+            isfinished = -1;
+            return -1;
         }}
     }}
 
     for (int i=0; i < {nthreads}; i++) {{
-        pthread_join(threads[i], NULL);
+
+        while (args[i].state == 0) {{
+            do {{ }} while(0);
+        }}
     }}
+
+    pthread_create(&(threads[{nthreads}]), &attr, _join, &(args[0]));
+
 """
 
 class PThreadEngine(Engine):
@@ -117,6 +149,7 @@ class PThreadEngine(Engine):
         return  """
 #include <pthread.h>
 #include <errno.h>
+#include <unistd.h>
 #include "string.h"
 #include "stdlib.h"
 #include "stdio.h"
@@ -222,6 +255,11 @@ class PThreadEngine(Engine):
                     "host"), varname=self.getname_var(arg, "host"))
 
         return out
+
+    def code_function(self):
+
+        return function_template.format(
+                    nthreads=str(self.nteams * self.nmembers))
 
     def code_devfunc(self):
 

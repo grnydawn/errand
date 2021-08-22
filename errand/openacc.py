@@ -283,9 +283,14 @@ class OpenAccCppEngine(Engine):
 #
         # testing
         #args.append("1")
+        copyin = ""
+        copyout = ""
+        create = ""
+        body = ""
 
         return calldevmain_template.format(
-                nthreads=str(self.nteams * self.nmembers))
+                nthreads=str(self.nteams * self.nmembers), copyin=copyin,
+                copyout=copyout, create=create, body=body)
 
     def get_template(self, name):
 

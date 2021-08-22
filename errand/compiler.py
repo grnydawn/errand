@@ -65,7 +65,7 @@ class OpenAcc_GNU_CPP_Compiler(GNU_CPP_Compiler):
     def get_option(self):
 
         return ("-fopenacc " +
-                super(OpenAcc_GNU_CPP_Compiler, self).get_option(self))
+                super(OpenAcc_GNU_CPP_Compiler, self).get_option())
 
 
 class CUDA_CPP_Compiler(CPP_Compiler):

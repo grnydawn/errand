@@ -43,10 +43,11 @@ public:
         return _attrs[3+_attrs[0]+dim];
     }}
     {funcprefix} int unravel_index(int tid, int dim) {{
-        int q, r=tid;
+        int q, r=tid, s;
         for (int i = 0; i < dim + 1; i++) {{
-            q = r / stride(i);
-            r = r % stride(i);
+            s = stride(i);
+            q = r / s;
+            r = r % s;
         }}
         return q;
     }}
@@ -96,8 +97,6 @@ extern "C" int run() {{
     {calldevmain} 
 
     {postrun}
-
-    isfinished = 1;
 
     return 0;
 }}
@@ -250,7 +249,7 @@ extern "C" int run() {{
         options = compiler.get_option()
         cmd = "%s %s -o %s %s" % (compiler.path, options, libpath, codepath)
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         out = shellcmd(cmd)
 
         if out.returncode  != 0:
