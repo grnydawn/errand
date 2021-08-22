@@ -116,18 +116,18 @@ class Context(object):
 
         inargs, outargs = self._split_arguments(vargs, caller_args)
 
-        ws = None
-        for engine in self.engines:
-            if engine.isavail():
-                ws = Workshop(inargs, outargs, self.order, engine,
-                            self.workdir, **kwargs)
-                self.tasks[ws] = {}
-                break
+        engines = [e for e in self.engines if e.isavail()]
 
-        if ws is None:
+        if engines:
+            ws = Workshop(inargs, outargs, self.order, engines,
+                            self.workdir, **kwargs)
+            self.tasks[ws] = {}
+
+            return ws
+
+        else:
             raise Exception("No engine is available")
 
-        return ws
 
     def shutdown(self):
 

@@ -39,12 +39,12 @@ def ttest_vecadd1d(engine):
         # context brings magic to user with coordination of eboys, order, and data with engine
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
+        # workshop represents machine, input&output, order, and engine
+        workshop = erd.workshop(a, b, "->", c)
+
         # logical worker entities
         # TODO: how to choose the best configuration per engine
         gofers = erd.gofers(N)
-
-        # workshop represents machine, input&output, order, and engine
-        workshop = erd.workshop(a, b, "->", c)
 
         # generate source code, compile, and run
         gofers.run(workshop)

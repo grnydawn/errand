@@ -13,37 +13,68 @@ class Workshop(object):
 
 """
 
-    def __init__(self, inargs, outargs, order, engine, workdir):
+    def __init__(self, inargs, outargs, order, engines, workdir):
 
         self.inargs = inargs
         self.outargs = outargs
         self.order = order
-        self.engine = engine
+        self.engines = engines
+        self.curengine = None
         self.workdir = workdir
         self.code = None
+
+    def set_engine(self, engine):
+        self.curengine = engine
+
+    def start_engine(self, engine, nteams, nmembers):
+
+        self.code = engine.gencode(nteams, nmembers, self.inargs,
+                        self.outargs, self.order)
+
+        engine.h2dcopy(self.inargs, self.outargs)
+
+        res = self.code.run()
+
+        if res == 0:
+            self.curengine = engine
+            return res
+
+        else:
+            raise Exception("Engine is not started.") 
+
 
     def open(self, nteams, nmembers):
 
         self.start = time.time()
 
-        # generate executable code
-        self.code = self.engine.gencode(nteams, nmembers, self.inargs,
-                        self.outargs, self.order)
+        try:
 
-        self.engine.h2dcopy(self.inargs, self.outargs)
+            if self.curengine is not None:
+                return self.start_engine(engine, nteams, nmembers)
 
-        res = self.code.run()
+            else:
+                for engine in self.engines:
+                    return self.start_engine(engine, nteams, nmembers)
+ 
+        except Exception as e:
+            pass
 
-        return res
+        raise Exception("No engine started.")
 
     # assumes that code.run() is async
     def close(self, timeout=None):
+
+        if self.code is None:
+            raise Exception("No code is generated.")
 
         while self.code.isalive() == 0 and (timeout is None or
             time.time()-self.start < float(timeout)):
 
             time.sleep(0.1)
 
-        res = self.engine.d2hcopy(self.outargs)
+        if self.curengine is None:
+            raise Exception("No selected engine")
+
+        res = self.curengine.d2hcopy(self.outargs)
 
         return res
