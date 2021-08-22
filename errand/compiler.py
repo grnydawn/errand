@@ -16,10 +16,13 @@ class Compiler(abc.ABC):
     def __init__(self, path):
 
         self.path = path
-        ver = self.get_version()
-        self.version = ver if ver else None
+        self.version = None
 
     def isavail(self):
+
+        if self.version is None:
+            self.version = self.get_version()
+
         return (self.path is not None and os.path.isfile(self.path) and
                 self.version is not None)
 
@@ -28,7 +31,11 @@ class Compiler(abc.ABC):
         return ""
 
     def get_version(self):
-        return shellcmd("%s --version" % self.path).stdout.decode()
+
+        ver = shellcmd("%s --version" % self.path).stdout.decode()
+
+        return ver if ver else None
+
 
 
 class CPP_Compiler(Compiler):
@@ -61,6 +68,8 @@ class OpenAcc_GNU_CPP_Compiler(Pthread_GNU_CPP_Compiler):
     def __init__(self, path=None):
 
         super(OpenAcc_GNU_CPP_Compiler, self).__init__(path)
+
+        self.version = self.get_version()
 
         match = re_gcc_version.search(self.version)
 
