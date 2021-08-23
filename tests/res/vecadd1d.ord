@@ -2,17 +2,17 @@
 
 [cuda, hip]
 
-    int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if(id < x.size()) z(id) = x(id) + y(id);
+	int id = blockDim.x * blockIdx.x + threadIdx.x;
+	if(id < x.size()) z(id) = x(id) + y(id);
 
 [pthread]
 	
-	int id = ERRAND_THREAD_ID;
-    z(id) = x(id) + y(id);
+	int id = ERRAND_GOFER_ID;
+	z(id) = x(id) + y(id);
 
 [openacc-c++]
 
-#pragma acc loop gang vector
+	#pragma acc loop gang vector
 	for (int id = 0; id < x.shape(0); id++) {
 		z(id) = x(id) + y(id);
 	}

@@ -283,8 +283,6 @@ class OpenAccCppEngine(Engine):
             host_updates.append("{name}.data[0:{name}._attrs[2]]".
                 format(name=arg["curname"]))
 
-        argassign.append("int ERRAND_THREAD_ID = args->tid;")
-
         return devfunc_template.format(argdef="\n".join(argdef), body=body,
                     argassign="\n".join(argassign),
                     creates=", \\\n".join(creates),

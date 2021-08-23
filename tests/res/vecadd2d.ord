@@ -22,8 +22,8 @@ control = True
 
 [pthread]
 
-    int row = a.unravel_index(ERRAND_THREAD_ID, 0);
-    int col = a.unravel_index(ERRAND_THREAD_ID, 1);
+    int row = a.unravel_index(ERRAND_GOFER_ID, 0);
+    int col = a.unravel_index(ERRAND_GOFER_ID, 1);
 
 	if (row < a.shape(0) && col < a.shape(1) )
 		c(row, col) = a(row, col) + b(row, col);

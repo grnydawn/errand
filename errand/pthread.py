@@ -276,7 +276,7 @@ class PThreadEngine(Engine):
             argdef.append("host_%s_dim%s %s;" % (dname, ndim, arg["curname"]))
             argassign.append("%s = *(args->data->host_%s);" % (arg["curname"], arg["curname"]))
 
-        argassign.append("int ERRAND_THREAD_ID = args->tid;")
+        argassign.append("int ERRAND_GOFER_ID = args->tid;")
 
         return devfunc_template.format(argdef="\n".join(argdef), body=body,
                     argassign="\n".join(argassign))
