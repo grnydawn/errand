@@ -2,7 +2,11 @@
 Getting started
 ===============
 
-**errand** makes use of conventional programming tools that you may be already familar with. For example, **errand** uses Nvidia CUDA compiler or AMD HIP compiler if needed. **errand** takes responsibilities of data movements between GPU and CPU so that you can focus on computation in CUDA, HIP, OpenAcc(C++), or Pthread(C++).
+**errand** is a Python module that enables users to easily use accelerator hardware such as GPU.
+
+**errand** takes responsibility of data movements between CPU and accelerators like GPU, and creates multiple threads on the accelerators. Therefore, user can focus on computation in well-known programmiong frameworks, such as Cuda, Hip, OpenAcc, and conventional pthread (more programming frameworks are coming.) **errand** takes advantages of the functionality and convinience of numpy ndarray.
+
+**errand** makes use of conventional programming tools that you may be already familar with. For example, **errand** uses Nvidia CUDA compiler or AMD HIP compiler if needed. As of this writing, **errand** supports CUDA, HIP, OpenAcc(C++), and Pthread(C++).
 
 Installation
 -------------
@@ -68,7 +72,7 @@ Python code (main.py)
 		print("FAILURE!")
 
 
-Errand takes in charge of data movements and thread generation. User is responsible for specifying computation in an order file. The order file below defines an element-wise addition of 2 dimensional array in multiple programming framework including Cuda, Hip, OpenAcc-C++, and PThread.
+While Errand handles data movements and thread generation, user needs to specify computation in an order file. For example, the order file below defines an element-wise addition of 2 dimensional array in multiple programming frameworks including Cuda, Hip, OpenAcc-C++, and PThread.
 
 For convinience, Errand provides user with a Numpy ndarray-like interface to the input and output arguments as demonstrated below. For example, an array can be accessed through indices and the shape array is informed with shape member method.
 

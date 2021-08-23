@@ -4,7 +4,7 @@ Errand Basics
 
 Writing an **errand** has two parts. The first part is to define errand in Python code. More specifically, user defines a workshop(analogous to h/w such as GPU) and gofers(analogous to threads). The second part is to define an order that the gofers run in the workshop.
 
-Defining workshop and gofers in Python code
+Writing a workshop and gofers in Python code
 ===============================================
 
 Following code shows typical way to define a workshop and gofers.
@@ -35,7 +35,7 @@ Errand runs the "errand" asynchronously. Therefore, Errand natually supports ove
 Errand collect output from target machine and populate it to output variable.
 
 
-Defining order in various programming frameworks
+Writing an order in various programming frameworks
 ===================================================
 
 As of this writing, Errand supports Cuda, Hip, OpenAcc(GNU C++), and PThread(GNU C++). More programming frameworks and compilers will be supported.
