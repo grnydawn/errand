@@ -28,6 +28,8 @@ Errand uses Python context manager to wrap all activities under "errand". In the
 
 Workshop is created through Errand context handler. Errand accepts numpy ndarray or Python objects that can be converted to ndarray. Arguments is splited by an arrow argument, "->". Left arguments of the arrow argument are input arguments, and right arguments are output arguments. In the example, "a" and "b" variables are inputs and "c" is an output variable.
 
+The second line calls gofers with the number of teams and members in each team. Errand provides user with flexible ways in calling gofers. For example, if there is only one integer argument, Errand consider it as the number of members in a team and there is only one team. Detail information on calling gofers will be explained in other pages in this site.
+
 Next, gofers runs the order on the workshop, where technically Errand generates source code based on "order.ord" and compiles it to an shared library, and load & run the shared library.
 
 Errand runs the "errand" asynchronously. Therefore, Errand natually supports overlapping computations between host machine and target machine.
