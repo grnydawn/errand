@@ -4,6 +4,7 @@
 """
 
 import os
+import numpy
 
 from errand.engine import Engine, varclass_template
 from errand.compiler import Compilers
@@ -258,8 +259,8 @@ class PThreadEngine(Engine):
 
     def code_function(self):
 
-        return function_template.format(
-                    nthreads=str(self.nteams * self.nmembers))
+        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+        return function_template.format(nthreads=str(nthreads))
 
     def code_devfunc(self):
 
@@ -332,8 +333,8 @@ class PThreadEngine(Engine):
         # testing
         #args.append("1")
 
-        return calldevmain_template.format(
-                nthreads=str(self.nteams * self.nmembers))
+        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+        return calldevmain_template.format(nthreads=str(nthreads))
 
     def get_template(self, name):
 

@@ -4,6 +4,7 @@
 """
 
 import os
+import numpy
 
 from errand.engine import Engine, varclass_template
 from errand.compiler import Compilers
@@ -283,14 +284,18 @@ class OpenAccCppEngine(Engine):
             host_updates.append("{name}.data[0:{name}._attrs[2]]".
                 format(name=arg["curname"]))
 
+        gangs = numpy.prod(self.nteams)
+        workers = numpy.prod(self.nmembers)
+        veclen = numpy.prod(self.nassigns)
+
         return devfunc_template.format(argdef="\n".join(argdef), body=body,
                     argassign="\n".join(argassign),
                     creates=", \\\n".join(creates),
                     dev_updates=", \\\n".join(dev_updates),
                     host_updates=", \\\n".join(host_updates),
                     deletes=", \\\n".join(deletes),
-                    ngangs=str(self.nteams), nworkers="1",
-                    veclen=str(self.nmembers))
+                    ngangs=str(gangs), nworkers=str(workers),
+                    veclen=str(veclen))
 
     def code_h2dcopyfunc(self):
 
@@ -343,8 +348,7 @@ class OpenAccCppEngine(Engine):
         # testing
         #args.append("1")
 
-        return calldevmain_template.format(
-                nthreads=str(self.nteams * self.nmembers))
+        return calldevmain_template.format()
 
     def get_template(self, name):
 

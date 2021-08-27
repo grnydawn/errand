@@ -119,7 +119,11 @@ __global__ void _kernel({args}){{
 """
 
 calldevmain_template = """
-    _kernel<<<{ngrids}, {nthreads}>>>({args});
+
+    const dim3 TEAM_SIZE = dim3({teams});
+    const dim3 MEMBER_SIZE = dim3({members});
+
+    _kernel<<<TEAM_SIZE, MEMBER_SIZE>>>({args});
 """
 
 class CudaHipEngine(Engine):
@@ -279,8 +283,11 @@ class CudaHipEngine(Engine):
 
             args.append(self.getname_var(arg, "dev"))
 
-        return calldevmain_template.format(ngrids=str(self.nteams),
-                nthreads=str(self.nmembers), args=", ".join(args))
+        teams = ", ".join([str(t) for t in self.nteams])
+        members = ", ".join([str(t) for t in self.nmembers])
+
+        return calldevmain_template.format(teams=teams, members=members,
+                    args=", ".join(args))
 
     def code_postrun(self):
         # NOTE: mark finished here; d2h copy will block until gpu run finish.

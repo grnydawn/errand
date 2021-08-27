@@ -116,6 +116,7 @@ extern "C" int run() {{
         self.sharedlib = None
         self.nteams = None
         self.nmembers = None
+        self.nassigns = None
         self.inargs = None
         self.outargs = None
         self.order = None
@@ -189,7 +190,7 @@ extern "C" int run() {{
        
         return self.dtypemap[arg["data"].dtype.name][0]
  
-    def gencode(self, nteams, nmembers, inargs, outargs, order):
+    def gencode(self, nteams, nmembers, nassigns, inargs, outargs, order):
 
         innames, outnames = order.get_argnames()
 
@@ -202,6 +203,7 @@ extern "C" int run() {{
 
         self.nteams = nteams
         self.nmembers = nmembers
+        self.nassigns = nassigns
         self.inargs = inargs
         self.outargs = outargs
         self.order = order

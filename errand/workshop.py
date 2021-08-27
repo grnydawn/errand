@@ -26,9 +26,9 @@ class Workshop(object):
     def set_engine(self, engine):
         self.curengine = engine
 
-    def start_engine(self, engine, nteams, nmembers):
+    def start_engine(self, engine, nteams, nmembers, nassigns):
 
-        self.code = engine.gencode(nteams, nmembers, self.inargs,
+        self.code = engine.gencode(nteams, nmembers, nassigns, self.inargs,
                         self.outargs, self.order)
 
         engine.h2dcopy(self.inargs, self.outargs)
@@ -43,18 +43,18 @@ class Workshop(object):
             raise Exception("Engine is not started.") 
 
 
-    def open(self, nteams, nmembers):
+    def open(self, nteams, nmembers, nassigns):
 
         self.start = time.time()
 
         try:
 
             if self.curengine is not None:
-                return self.start_engine(engine, nteams, nmembers)
+                return self.start_engine(engine, nteams, nmembers, nassigns)
 
             else:
                 for engine in self.engines:
-                    return self.start_engine(engine, nteams, nmembers)
+                    return self.start_engine(engine, nteams, nmembers, nassigns)
  
         except Exception as e:
             pass

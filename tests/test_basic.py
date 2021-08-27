@@ -7,6 +7,7 @@ from errand import Errand
 here = os.path.dirname(os.path.abspath(__file__))
 #test_engines = ["cuda", "hip", "pthread"]
 test_engines = ["hip", "pthread", "openacc-c++"]
+#test_engines = ["hip"]
 #test_engines = ["pthread"]
 #test_engines = ["openacc-c++"]
 
@@ -72,7 +73,7 @@ def test_vecadd2d(engine):
 
         workshop = erd.workshop(a, b, "->", c)
 
-        gofers = erd.gofers(NROW, NCOL)
+        gofers = erd.gofers(NCOL, NROW)
 
         gofers.run(workshop)
 
@@ -80,7 +81,7 @@ def test_vecadd2d(engine):
 
 
 @pytest.mark.parametrize("engine", test_engines)
-def ttest_vecadd3d(engine):
+def test_vecadd3d(engine):
 
     #NROW, NCOL = 2000, 300
     X, Y, Z = 10, 3, 2
@@ -95,7 +96,7 @@ def ttest_vecadd3d(engine):
 
         workshop = erd.workshop(a, b, "->", c)
 
-        gofers = erd.gofers(X, (Y, Z))
+        gofers = erd.gofers(Z, (X, Y))
 
         gofers.run(workshop)
 
@@ -117,7 +118,7 @@ def test_listadd2d(engine):
 
         workshop = erd.workshop(a, b, "->", c)
 
-        gofers = erd.gofers(NROW, NCOL)
+        gofers = erd.gofers(NCOL, NROW)
 
         gofers.run(workshop)
 

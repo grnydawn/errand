@@ -1,0 +1,41 @@
+
+# turn on/off a section
+control = True
+
+# the input and output variables are renamed
+# from a, b, and c to x, y, and z
+
+#[signature: x, y -> z]
+
+[cuda, hip@enable=control]
+
+	int X = blockIdx.x;
+	int Y = blockIdx.y;
+	int Z = threadIdx.x;
+
+	// the input and output variables keep the convinience of numpy
+
+	if (X < a.shape(0) && Y < a.shape(1) && Z < a.shape(2))
+		c(X, Y, Z) = a(X, Y, Z) + b(X, Y, Z);
+
+[pthread]
+
+    int X = a.unravel_index(ERRAND_GOFER_ID, 0);
+    int Y = a.unravel_index(ERRAND_GOFER_ID, 1);
+    int Z = a.unravel_index(ERRAND_GOFER_ID, 2);
+
+	if (X < a.shape(0) && Y < a.shape(1) && Z < a.shape(2))
+		c(X, Y, Z) = a(X, Y, Z) + b(X, Y, Z);
+
+[openacc-c++]
+
+	#pragma acc loop gang
+	for (int X = 0; X < a.shape(0); X++) {
+		#pragma acc loop worker
+		for (int Y = 0; Y < a.shape(1); Y++) {
+			#pragma acc loop vector
+			for (int Z = 0; Z < a.shape(2); Z++) {
+				c(X, Y, Z) = a(X, Y, Z) + b(X, Y, Z);
+			}
+		}
+	}
