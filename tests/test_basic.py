@@ -6,13 +6,13 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 #test_engines = ["cuda", "hip", "pthread"]
-test_engines = ["hip", "pthread", "openacc-c++"]
+#test_engines = ["hip", "pthread", "openacc-c++"]
 #test_engines = ["hip"]
-#test_engines = ["pthread"]
+test_engines = ["pthread"]
 #test_engines = ["openacc-c++"]
 
 @pytest.mark.parametrize("engine", test_engines)
-def test_vecadd1d(engine):
+def ttest_vecadd1d(engine):
 
     N = 100
 
@@ -81,7 +81,7 @@ def test_vecadd2d(engine):
 
 
 @pytest.mark.parametrize("engine", test_engines)
-def test_vecadd3d(engine):
+def ttest_vecadd3d(engine):
 
     #NROW, NCOL = 2000, 300
     X, Y, Z = 10, 3, 2
@@ -103,7 +103,7 @@ def test_vecadd3d(engine):
     assert np.array_equal(c, a+b)
 
 @pytest.mark.parametrize("engine", test_engines)
-def test_listadd2d(engine):
+def ttest_listadd2d(engine):
 
     NROW = 2
     NCOL = 3

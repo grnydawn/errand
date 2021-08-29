@@ -15,6 +15,8 @@ class Workshop(object):
 
     def __init__(self, inargs, outargs, order, engines, workdir):
 
+        self.engines = select_engine(engine, self.workdir, self.order, compile=compile)
+
         self.inargs = inargs
         self.outargs = outargs
         self.order = order
@@ -40,24 +42,23 @@ class Workshop(object):
             return res
 
         else:
-            raise Exception("Engine is not started.") 
+            raise Exception("Engine is failed.") 
 
 
     def open(self, nteams, nmembers, nassigns):
 
         self.start = time.time()
 
-        try:
+        if self.curengine is not None:
+            return self.start_engine(engine, nteams, nmembers, nassigns)
 
-            if self.curengine is not None:
-                return self.start_engine(engine, nteams, nmembers, nassigns)
-
-            else:
-                for engine in self.engines:
+        else:
+            for engine in self.engines:
+                try:
                     return self.start_engine(engine, nteams, nmembers, nassigns)
  
-        except Exception as e:
-            pass
+                except Exception as err:
+                    pass
 
         raise Exception("No engine started.")
 

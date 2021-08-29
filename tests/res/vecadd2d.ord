@@ -7,7 +7,7 @@ control = True
 
 #[signature: x, y -> z]
 
-[cuda, hip@enable=control]
+[cuda, hip: -O2 @enable=control]
 
 	// NROW teams are interpreted to Cuca/Hip blocks
 	// NCOL gofers are interpreted to Cuca/Hip threads

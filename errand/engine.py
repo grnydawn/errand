@@ -8,6 +8,8 @@ import numpy as np
 from numpy.ctypeslib import ndpointer, load_library
 from ctypes import c_int, c_longlong, c_float, c_double, c_size_t
 
+
+from errand.compiler import Compiler
 from errand.util import shellcmd
 
 _installed_engines = {}
@@ -110,19 +112,19 @@ extern "C" int run() {{
         "float64": ["double", c_double]
     }
 
-    def __init__(self, workdir, compilers, targetsystem):
+    def __init__(self, workdir, order, compile=compile):
 
         self.workdir = workdir
+        self.order = order
+        self.compiler = Compiler(self.name, compile=compile)
         self.sharedlib = None
         self.nteams = None
         self.nmembers = None
         self.nassigns = None
         self.inargs = None
         self.outargs = None
-        self.order = None
-        self.compilers = compilers
-        self.hostsystem = None
-        self.targetsystem = targetsystem
+        self.host = None
+        self.accel = select_machine(self.machine)
 
     def isavail(self):
         return (self.compilers is not None and self.compilers.isavail() and
@@ -251,7 +253,7 @@ extern "C" int run() {{
         options = compiler.get_option()
         cmd = "%s %s -o %s %s" % (compiler.path, options, libpath, codepath)
 
-        #import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         out = shellcmd(cmd)
 
         if out.returncode  != 0:
@@ -345,7 +347,7 @@ extern "C" int run() {{
                 self._copy2orgdata(arg)
 
 
-def select_engine(engine, order):
+def select_engine(engine, order, workdir, compile=None):
 
     if len(_installed_engines) == 0:
         from errand.cuda_hip import CudaEngine, HipEngine
@@ -371,15 +373,19 @@ def select_engine(engine, order):
     selected = []
     targets = order.get_targetnames()
 
-    for tname in targets:
-        if tname in _installed_engines:
-            tempeng = _installed_engines[tname]
+    try:
+        for tname in targets:
+            if tname in _installed_engines:
+                tempeng = _installed_engines[tname]
 
-            if candidate is not None:
-                if candidate is tempeng:
-                    selected.append(tempeng)
-            else:
-                selected.append(tempeng)
+                if candidate is not None:
+                    if candidate is tempeng:
+                        selected.append(tempeng(order, workdir, compile=compile))
+                else:
+                    selected.append(tempeng(order, workdir, compile=compile))
+
+    except Exception as err:
+        pass
 
     if len(selected) == 0:
         if engine is None:

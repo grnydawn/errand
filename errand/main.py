@@ -27,7 +27,7 @@ class Errand(object):
     def __enter__(self):
 
         self.tempdir = tempfile.mkdtemp()
-        self.context =  Context(self.order, self.tempdir, **self.kwargs)
+        self.context =  Context(self.order, workdir=self.tempdir, **self.kwargs)
 
         return self.context
 

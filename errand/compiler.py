@@ -8,7 +8,7 @@ from errand.util import which, shellcmd
 
 re_gcc_version = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d)+")
 
-class Compiler(abc.ABC):
+class CompilerBase(abc.ABC):
     """Parent class for all compiler classes
 
 """
@@ -26,6 +26,11 @@ class Compiler(abc.ABC):
         return (self.path is not None and os.path.isfile(self.path) and
                 self.version is not None)
 
+    @classmethod
+    @abc.abstractmethod
+    def verify_compiler(cls, compiler):
+        return False
+
     @abc.abstractmethod
     def get_option(self):
         return ""
@@ -38,7 +43,7 @@ class Compiler(abc.ABC):
 
 
 
-class CPP_Compiler(Compiler):
+class CPP_Compiler(CompilerBase):
 
     def __init__(self, path):
         super(CPP_Compiler, self).__init__(path)
@@ -55,6 +60,19 @@ class GNU_CPP_Compiler(CPP_Compiler):
 
     def get_option(self):
         return "-shared -fPIC " + super(GNU_CPP_Compiler, self).get_option()
+
+
+class CrayClang_CPP_Compiler(CPP_Compiler):
+
+    def __init__(self, path=None):
+
+        if path is None:
+            path = which("clang++")
+
+        super(CrayClang_CPP_Compiler, self).__init__(path)
+
+    def get_option(self):
+        return "-shared -fPIC " + super(CrayClang_CPP_Compiler, self).get_option()
 
 
 class Pthread_GNU_CPP_Compiler(GNU_CPP_Compiler):
@@ -112,16 +130,16 @@ class HIP_CPP_Compiler(CPP_Compiler):
         return "-fPIC --shared"
 
 
-class Compilers(object):
+class Compiler(object):
 
-    def __init__(self, engine):
+    def __init__(self, engine, compile=compile):
 
         self.clist = []
 
         clist = []
 
         if engine == "pthread":
-            clist =  [Pthread_GNU_CPP_Compiler]
+            clist =  [CrayClang_CPP_Compiler, Pthread_GNU_CPP_Compiler]
 
         elif engine == "cuda":
             clist =  [CUDA_CPP_Compiler]
@@ -137,10 +155,10 @@ class Compilers(object):
 
         for cls in clist:
             try:
-                self.clist.append(cls())
+                self.clist.append(cls(compile=compile))
 
             except Exception as err:
-                pass
+                print("WARNING: %s" % str(err))
 
     def isavail(self):
 

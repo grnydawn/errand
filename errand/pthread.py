@@ -8,7 +8,6 @@ import numpy
 
 from errand.engine import Engine, varclass_template
 from errand.compiler import Compilers
-from errand.system import select_system
 from errand.util import which
 
 
@@ -76,6 +75,8 @@ void * _kernel(void * ptr){{
     {body}
 
     args->state = 2;
+
+    return NULL;
 }}
 """
 
@@ -87,11 +88,13 @@ void * _join(void * ptr){{
     for (int i=0; i < {nthreads}; i++) {{
 
         while (args[i].state < 2) {{
-            sleep(0.001);
+            //sleep(0.001);
         }}
     }}
 
     isfinished = 1;
+
+    return NULL;
 }}
 """
 
@@ -133,14 +136,7 @@ class PThreadEngine(Engine):
     name = "pthread"
     codeext = "cpp"
     libext = "so"
-
-    def __init__(self, workdir):
-
-        compilers = Compilers(self.name)
-        targetsystem = select_system("cpu")
-
-        super(PThreadEngine, self).__init__(workdir, compilers,
-            targetsystem)
+    machine = "cpu"
 
     #def compiler_option(self):
     #    return self.option + "--compiler-options '-fPIC' --shared"

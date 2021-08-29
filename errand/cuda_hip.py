@@ -7,7 +7,6 @@ import os
 
 from errand.engine import Engine, varclass_template
 from errand.compiler import Compilers
-from errand.system import select_system
 from errand.util import which
 
 # key ndarray attributes
@@ -299,14 +298,7 @@ class CudaEngine(CudaHipEngine):
     name = "cuda"
     codeext = "cu"
     libext = "so"
-
-    def __init__(self, workdir):
-
-        compilers = Compilers(self.name)
-        targetsystem = select_system("nvidia-gpu")
-
-        super(CudaEngine, self).__init__(workdir, compilers,
-            targetsystem)
+    machine = "nvidia-gpu"
 
     def code_header(self):
 
@@ -334,14 +326,7 @@ class HipEngine(CudaHipEngine):
     name = "hip"
     codeext = "hip.cpp"
     libext = "so"
-
-    def __init__(self, workdir):
-
-        compilers = Compilers(self.name)
-        targetsystem = select_system("amd-gpu")
-
-        super(HipEngine, self).__init__(workdir, compilers,
-            targetsystem)
+    machine = "amd-gpu"
 
     def code_header(self):
 

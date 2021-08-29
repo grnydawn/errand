@@ -8,7 +8,6 @@ import numpy
 
 from errand.engine import Engine, varclass_template
 from errand.compiler import Compilers
-from errand.system import select_system
 from errand.util import which
 
 
@@ -118,14 +117,7 @@ class OpenAccCppEngine(Engine):
     name = "openacc-c++"
     codeext = "cpp"
     libext = "so"
-
-    def __init__(self, workdir):
-
-        compilers = Compilers(self.name)
-        targetsystem = select_system("cpu")
-
-        super(OpenAccCppEngine, self).__init__(workdir, compilers,
-            targetsystem)
+    machine = "pu"
 
     #def compiler_option(self):
     #    return self.option + "--compiler-options '-fPIC' --shared"

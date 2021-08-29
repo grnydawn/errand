@@ -4,7 +4,7 @@ Define Errand context
 
 """
 
-import time, inspect
+import os, time, inspect
 from numpy import ndarray, asarray
 
 from errand.order import Order
@@ -20,7 +20,8 @@ class Context(object):
 
 """
 
-    def __init__(self, order, workdir, engine=None, context=None, timeout=None):
+    def __init__(self, order, workdir=None, engine=None, context=None, timeout=None,
+                 compile=None):
 
         # TODO: config data
         # TODO: documentation
@@ -41,14 +42,16 @@ class Context(object):
         # TODO: basic approaches: user focuses on computation. clear/simple/reasonable role of Errand
 
         self._env = dict(errand_builtins)
-        self.tasks = {} # contains workshops
-        self.result = [] # contains results from workshops
+
+        self.context = context
 
         self.order = order if isinstance(order, Order) else Order(order, self._env)
+        self.workshops = {}
+        self.gofers = None
 
-        self.workdir = workdir
-        self.engines = [e(workdir) for e in select_engine(engine, self.order)]
-        self.context = context
+        self.result = [] # contains results from workshops
+        self.workdir = workdir if workdir is not None else os.getcwd()
+        #self.engines = select_engine(engine, self.workdir, self.order, compile=compile)
         self.timeout = timeout
 
 
@@ -57,11 +60,8 @@ class Context(object):
         # may have many optional arguments that hints
         # to determin how many gofers to be called, or the group hierachy 
 
-        if len(vargs) > 0:
-            return Gofers(*vargs)
-
-        else:
-            return Gofers(1)
+        self.gofers = Gofers(*vargs) if vargs else Gofers(1)
+        return self.gofers
 
     def _pack_argument(self, arg, caller_args):
 
@@ -109,27 +109,19 @@ class Context(object):
 
         return (inargs, outargs)
 
-    def workshop(self, *vargs, **kwargs):
+    def workshop(self, *vargs):
 
         caller_local_vars = inspect.currentframe().f_back.f_locals.items()
         caller_args = dict([(id(v), n) for n, v in caller_local_vars])
 
         inargs, outargs = self._split_arguments(vargs, caller_args)
 
-        engines = [e for e in self.engines if e.isavail()]
+        ws = Workshop(inargs, outargs, self.order, self.workdir, hhh**kwargs)
+        self.workshops[ws] = {}
 
-        if engines:
-            ws = Workshop(inargs, outargs, self.order, engines,
-                            self.workdir, **kwargs)
-            self.tasks[ws] = {}
-
-            return ws
-
-        else:
-            raise Exception("No engine is available")
-
+        return ws
 
     def shutdown(self):
 
-        for ws in self.tasks:
+        for ws in self.workshops:
             self.result.append(ws.close(timeout=self.timeout))
