@@ -57,7 +57,7 @@ Python code (main.py)
 		workshop = erd.workshop(a, b, "->", c)
 
 		# call N1 teams of N2 gofers 
-		gofers = erd.gofers(N1, N2)
+		gofers = erd.gofers(N2, N1)
 
 		# let gofers do their work at the workshop
 		gofers.run(workshop)
