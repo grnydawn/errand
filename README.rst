@@ -56,7 +56,7 @@ Python code (main.py)
 	with Errand("order.ord") as erd:
 
 		# call NROW teams of NCOL gofers 
-		gofers = erd.gofers(NROW, NCOL)
+		gofers = erd.gofers(NCOL, NROW)
 
 		# build workshop with input(a, b) and output(c)
 		workshop = erd.workshop(a, b, "->", c)
