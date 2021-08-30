@@ -49,7 +49,24 @@ class Gofers(object):
         else:
             raise Exception("Wrong # of Gofers initialization: %d" % len(sizes))
 
-    def run(self, workshop):
+    def run(self, workshop, timeout=None):
 
-        return workshop.open(*self.sizes)
+            time.time()-self.start
+
+            time.sleep(0.1)
+
+        if self.curengine is None:
+            raise Exception("No selected engine")
+
+        try:
+            workshop.open(*self.sizes)
+
+            workshop.ready()
+
+            return workshop.run()
+
+        except Exception as err:
+
+            # handle exc
+            pass
 

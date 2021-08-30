@@ -3,63 +3,41 @@
 
 """
 
-import time
-
-from collections import OrderedDict
-
 
 class Workshop(object):
     """Errand workshop class
 
 """
 
-    def __init__(self, inargs, outargs, order, engines, workdir):
+    def __init__(self, inargs, outargs, order, method=None):
 
         self.inargs = inargs
         self.outargs = outargs
         self.order = order
-        self.engines = engines
-        self.curengine = None
-        self.workdir = workdir
-        self.code = None
+        self.method = method
+        self.engine = None
 
-    def set_engine(self, engine):
-        self.curengine = engine
+    def open(self, engine, nteams, nmembers, nassigns):
 
-    def start_engine(self, engine, nteams, nmembers, nassigns):
-
-        self.code = engine.gencode(nteams, nmembers, nassigns, self.inargs,
+        for engine in self.select_engines(self.method):
+            try:
+                engine.start(nteams, nmembers, nassigns, self.inargs,
                         self.outargs, self.order)
+                self.engine = engine
 
-        engine.h2dcopy(self.inargs, self.outargs)
+            except Exception as err:
+                pass
 
-        res = self.code.run()
+    def ready(self):
 
-        if res == 0:
-            self.curengine = engine
-            return res
-
+        if self.engine:
+            # copy data to target machine
         else:
-            raise Exception("Engine is not started.") 
+            raise Exception("No engine is started.")
 
 
-    def open(self, nteams, nmembers, nassigns):
-
-        self.start = time.time()
-
-        try:
-
-            if self.curengine is not None:
-                return self.start_engine(engine, nteams, nmembers, nassigns)
-
-            else:
-                for engine in self.engines:
-                    return self.start_engine(engine, nteams, nmembers, nassigns)
- 
-        except Exception as e:
-            pass
-
-        raise Exception("No engine started.")
+    def run(self):
+        pass
 
     # assumes that code.run() is async
     def close(self, timeout=None):

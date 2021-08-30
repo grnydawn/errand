@@ -143,4 +143,8 @@ core
 old
 *.exe
 *.so
+*.o
+*.mod
 a.out
+.nfs*
+errand/.nfs*

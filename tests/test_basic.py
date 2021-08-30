@@ -29,7 +29,7 @@ def test_vecadd1d(engine):
     # include attrs of workshop like engine, ncores, nthreads/core, memory, ...
     # hip or cuda engine
     #with Errand(order, engine="hip") as erd:
-    with Errand(order, engine=engine, timeout=5) as erd:
+    with Errand(order) as erd:
 
         # hierachical settings: order -> context -> base
         # best-effort of guessing default settings
@@ -41,14 +41,14 @@ def test_vecadd1d(engine):
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
         # workshop represents machine, input&output, order, and engine
-        workshop = erd.workshop(a, b, "->", c)
+        workshop = erd.workshop(a, b, "->", c, engine=engine)
 
         # logical worker entities
         # TODO: how to choose the best configuration per engine
         gofers = erd.gofers(N)
 
         # generate source code, compile, and run
-        gofers.run(workshop)
+        gofers.run(workshop, timeout=5)
  
         # do whatever before gofers complete errand
 
@@ -69,13 +69,13 @@ def test_vecadd2d(engine):
 
     order = os.path.join(here, "res", "vecadd2d.ord")
 
-    with Errand(order, engine=engine, timeout=5) as erd:
+    with Errand(order) as erd:
 
-        workshop = erd.workshop(a, b, "->", c)
+        workshop = erd.workshop(a, b, "->", c, engine=engine)
 
         gofers = erd.gofers(NCOL, NROW)
 
-        gofers.run(workshop)
+        gofers.run(workshop, timeout=5)
 
     assert np.array_equal(c, a+b)
 
@@ -92,13 +92,13 @@ def test_vecadd3d(engine):
 
     order = os.path.join(here, "res", "vecadd3d.ord")
 
-    with Errand(order, engine=engine, timeout=5) as erd:
+    with Errand(order) as erd:
 
-        workshop = erd.workshop(a, b, "->", c)
+        workshop = erd.workshop(a, b, "->", c, engine=engine)
 
         gofers = erd.gofers(Z, (X, Y))
 
-        gofers.run(workshop)
+        gofers.run(workshop, timeout=5)
 
     assert np.array_equal(c, a+b)
 
@@ -114,13 +114,13 @@ def test_listadd2d(engine):
 
     order = os.path.join(here, "res", "vecadd2d.ord")
 
-    with Errand(order, engine=engine, timeout=5) as erd:
+    with Errand(order) as erd:
 
-        workshop = erd.workshop(a, b, "->", c)
+        workshop = erd.workshop(a, b, "->", c, engine=engine)
 
         gofers = erd.gofers(NCOL, NROW)
 
-        gofers.run(workshop)
+        gofers.run(workshop, timeout=5)
 
     for i in range(NROW):
         for j in range(NCOL):
