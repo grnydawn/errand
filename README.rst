@@ -91,3 +91,22 @@ Order code (order.ord)
 
 		if (row < x.shape(0) && col < x.shape(1))
 			c(row, col) = a(row, col) + b(row, col);
+
+	[openacc-c++]
+
+		#pragma acc loop gang
+		for (int row = 0; row < a.shape(0); row++) {
+
+			#pragma acc loop worker
+			for (int col = 0; col < a.shape(1); col++) {
+				c(row, col) = a(row, col) + b(row, col);
+			}
+		}
+
+	[pthread]
+
+		int row = a.unravel_index(ERRAND_GOFER_ID, 0);
+		int col = a.unravel_index(ERRAND_GOFER_ID, 1);
+
+		if (row < a.shape(0) && col < a.shape(1) )
+			c(row, col) = a(row, col) + b(row, col);
