@@ -4,7 +4,7 @@ Define Errand context
 
 """
 
-import inspect
+import time, inspect
 from numpy import ndarray, asarray
 
 from errand.order import Order
@@ -17,17 +17,16 @@ class Errand(object):
     """Errand class
 
 """
-    def __init__(self, order, context=None, **kwargs):
+    def __init__(self, order, context=None, timeout=None):
 
         self._env = dict(errand_builtins)
+        self._parent = context
+        self._timeout = timeout
 
-        self.order = (order if isinstance(order, Order) else
+        self._order = (order if isinstance(order, Order) else
                         Order(order, self._env))
-        self.parent = context
-        self.kwargs = kwargs
-
-        self.gofers = {}
-        self.workshops = {}
+        self._gofers = {} # intelligence
+        self._workshops = {} # hardware
      
         # TODO: config data
         # TODO: documentation
@@ -49,15 +48,24 @@ class Errand(object):
  
     def __enter__(self):
 
+        self._started_at = time.time()
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
 
-        for ws in self.workshops:
-            self.result.append(ws.close())
+        while (any(go.isbusy() for go in self._gofers)):
 
-        for gofers in self.gofers:
-            gofers.quit()
+            if (self._timeout and time.time() - self._started_at > self._timeout):
+                break
+
+            time.sleep(0.1)
+
+        for ws in self._workshops:
+            ws.close()
+
+        for go in self._gofers:
+            go.quit()
 
     def workshop(self, *vargs, **kwargs):
 
@@ -66,8 +74,8 @@ class Errand(object):
 
         inargs, outargs = self._split_arguments(vargs, caller_args)
 
-        ws = Workshop(inargs, outargs, self.order, **kwargs)
-        self.workshops[ws] = {}
+        ws = Workshop(inargs, outargs, self._order, **kwargs)
+        self._workshops[ws] = {}
 
         return ws
 
@@ -77,7 +85,7 @@ class Errand(object):
         # to determin how many gofers to be called, or the group hierachy 
 
         gofers = Gofers(*vargs, **kwargs)
-        self.gofers[gofers] = {}
+        self._gofers[gofers] = {}
 
         return gofers
 
@@ -126,4 +134,3 @@ class Errand(object):
             outargs = []
 
         return (inargs, outargs)
-

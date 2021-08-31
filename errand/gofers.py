@@ -7,9 +7,15 @@ class Gofers(object):
     """Errand gofers class
 
 """
+
     def __init__(self, *sizes):
 
         self._norm_sizes(*sizes)
+        self.machine = None
+
+    def isbusy(self):
+
+        return self.machine.isbusy() if self.machine else False
 
     def _norm_sizes(self, *sizes):
 
@@ -49,24 +55,26 @@ class Gofers(object):
         else:
             raise Exception("Wrong # of Gofers initialization: %d" % len(sizes))
 
-    def run(self, workshop, timeout=None):
-
-            time.time()-self.start
-
-            time.sleep(0.1)
-
-        if self.curengine is None:
-            raise Exception("No selected engine")
+    def run(self, workshop):
 
         try:
-            workshop.open(*self.sizes)
+            for machine in workshop:
 
-            workshop.ready()
+                machine.start(gofers)
 
-            return workshop.run()
+                machine.load()
+
+                machine.operate()
+
+                self.machine = machine
+
+                break
 
         except Exception as err:
+            # TODO do error handlings
+            raise err
 
-            # handle exc
-            pass
+    def quit(self):
 
+        if self.machine:
+            self.machine.unload()
