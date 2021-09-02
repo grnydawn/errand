@@ -10,6 +10,15 @@ class Workshop(object):
 
 """
 
+    def __init__(self, inargs, outargs, order, compile=None):
+
+        self.inargs = inargs
+        self.outargs = outargs
+        self.order = order
+        self.compile = compile
+        self.machines = self.select_machines(compile, order)
+        self.mach_index = -1
+
     def __next__(self):
 
         self.mach_index += 1
@@ -24,15 +33,6 @@ class Workshop(object):
 
     def __iter__(self):
         return self
-
-    def __init__(self, inargs, outargs, order, compile=None):
-
-        self.inargs = inargs
-        self.outargs = outargs
-        self.order = order
-        self.compile = compile
-        self.machines = self.select_machines(compile, order)
-        self.mach_index = -1
 
     def select_machines(self, compile, order):
 
@@ -60,7 +60,7 @@ class MachineBase(abc.ABC):
 
     def __new__(cls, *vargs, **kwargs):
 
-        obj = super(class_name, cls).__new__(cls, *vargs, **kwargs)
+        obj = super(MachineBase, cls).__new__(cls)
 
         if "order" not in kwargs:
             raise Exception("Can not find order input")
@@ -69,12 +69,20 @@ class MachineBase(abc.ABC):
 
         if "compile" in kwargs:
             compile = kwargs.pop("compile").lstrip()
-            obj.compiler, flags = compile.split(" ", 1)
+            temp = compile.split(" ", 1)
+            obj.compiler, flags = temp if len(temp)==2 else (compile, "")
             obj.flags = cls.sharedlib_flags + " " + flags
 
+            check compiler
+
         else:
-            obj.compiler = cls.default_compiler
-            obj.flags = cls.sharedlib_flags + " " + cls.default_flags
+            for comp, sflags, flags, repat in cls.compile:
+                try:
+                    obj.compiler = cls.default_compiler
+                    obj.flags = cls.sharedlib_flags + " " + cls.default_flags
+
+                    check compiler
+                except:
 
         obj.target = cls.ready_target()
 
@@ -84,9 +92,9 @@ class MachineBase(abc.ABC):
 
     def check_avail(self, compiler=None, flags=None, target=None):
 
-        assert check_compiler(compiler if compiler else self.compiler) is True
-        assert check_flags(flags if flags else self.flags) is True
-        assert check_target(target if target else self.target) is True
+        assert self.check_compiler(compiler if compiler else self.compiler) is True
+        assert self.check_flags(flags if flags else self.flags) is True
+        assert self.check_target(target if target else self.target) is True
 
     # raise exceptioin if fails
     @abc.abstractmethod
@@ -123,6 +131,10 @@ class MachineBase(abc.ABC):
 
 class CudaMachine(MachineBase):
 
+    default_compiler = "nvcc"
+    sharedlib_flags = "--compiler-options '-fPIC' --shared"
+    default_flags = ""
+
     def check_compiler(self, compiler):
         return False
 
@@ -144,7 +156,12 @@ class CudaMachine(MachineBase):
 
 class HipMachine(MachineBase):
  
+    compiles = (
+        ("hipcc", "-fPIC --shared", "", b"dsfdsfsd"),
+    )
+
     def check_compiler(self, compiler):
+        import pdb; pdb.set_trace()
         return False
 
     def start(self, gofers):
@@ -164,6 +181,10 @@ class HipMachine(MachineBase):
 
 class PthreadCppMachine(MachineBase):
  
+    default_compiler = "nvcc"
+    sharedlib_flags = ""
+    default_flags = ""
+
     def check_compiler(self, compiler):
         return False
 
@@ -184,6 +205,10 @@ class PthreadCppMachine(MachineBase):
     
 class OpenaccCppMachine(MachineBase):
   
+    default_compiler = "nvcc"
+    sharedlib_flags = ""
+    default_flags = ""
+
     def check_compiler(self, compiler):
         return False
 
