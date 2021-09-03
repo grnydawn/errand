@@ -16,31 +16,14 @@ class Workshop(object):
         self.outargs = outargs
         self.order = order
         self.compile = compile
-        self.machines = self.select_machines(compile, order)
-        self.mach_index = -1
+        self.machine = None
 
-    def __next__(self):
-
-        self.mach_index += 1
-
-        if self.mach_index < len(self.machines):
-
-            # build machine
-
-            return machine
-
-        raise StopIteration()
-
-    def __iter__(self):
-        return self
-
-    def select_machines(self, compile, order):
-
-        machines = []
+    def select_machines(self, gofers):
 
         for mach in MachineBase.__subclasses__():
             try:
-                machines.append(mach(order=order, compile=compile))
+                self.machine = mach(order=self.order, compile=self.compile,
+                                    gofers=gofers)
 
             except:
                 pass
@@ -48,13 +31,13 @@ class Workshop(object):
         if len(machines) == 0:
             raise Exception("No supported resource is available")
 
-        return machines
-
     def close(self):
 
-        pass
-        #res = self.curengine.d2hcopy(self.outargs)
-        #return res
+        if self.machine:
+        res = self.machine.d2hcopy(self.outargs)
+
+        self.machine = None
+
 
 class MachineBase(abc.ABC):
 

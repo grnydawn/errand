@@ -24,8 +24,8 @@ class Errand(object):
         self._timeout = timeout
 
         self._order = (order if isinstance(order, Order) else
-                        Order(order, self._env))
-        self._gofers = {} # intelligence
+                        Order(order, self._env)) # the task
+        self._gofers = {} # threads
         self._workshops = {} # hardware
      
         # TODO: config data

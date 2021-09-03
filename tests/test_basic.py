@@ -7,8 +7,8 @@ from errand import Errand
 here = os.path.dirname(os.path.abspath(__file__))
 #test_compiles = ["cuda", "hip", "pthread"]
 #test_compiles = ["hip", "pthread", "openacc-c++"]
-test_compiles = ["hip"]
-#test_compiles = ["pthread"]
+#test_compiles = ["hip"]
+test_compiles = ["pthread"]
 #test_compiles = ["openacc-c++"]
 
 @pytest.mark.parametrize("compile", test_compiles)

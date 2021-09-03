@@ -10,7 +10,7 @@ class Gofers(object):
 
     def __init__(self, *sizes):
 
-        self._norm_sizes(*sizes)
+        self.sizes = self._norm_sizes(*sizes)
         self.machine = None
 
     def isbusy(self):
@@ -42,15 +42,15 @@ class Gofers(object):
 
         # (members, teams, assignments)
         if len(sizes) == 3:
-            self.sizes = [_n(sizes[1]), _n(sizes[0]), _n(sizes[2])]
+            return [_n(sizes[1]), _n(sizes[0]), _n(sizes[2])]
 
         # (members, teams)
         elif len(sizes) == 2:
-            self.sizes = [_n(sizes[1]), _n(sizes[0]), _n(1)]
+            return [_n(sizes[1]), _n(sizes[0]), _n(1)]
 
         # (members)
         elif len(sizes) == 1:
-            self.sizes = [_n(1), _n(sizes[0]), _n(1)]
+            return [_n(1), _n(sizes[0]), _n(1)]
 
         else:
             raise Exception("Wrong # of Gofers initialization: %d" % len(sizes))
@@ -58,9 +58,9 @@ class Gofers(object):
     def run(self, workshop):
 
         try:
-            for machine in workshop:
+            for machine in workshop.select_machines(self.sizes):
 
-                machine.start(gofers)
+                machine.start()
 
                 machine.load()
 
@@ -78,3 +78,4 @@ class Gofers(object):
 
         if self.machine:
             self.machine.unload()
+
