@@ -59,8 +59,6 @@ class Errand(object):
             if (self._timeout and time.time() - self._started_at > self._timeout):
                 break
 
-            time.sleep(0.1)
-
         for ws in self._workshops:
             ws.close()
 

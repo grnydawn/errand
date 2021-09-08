@@ -1,0 +1,181 @@
+"""Errand workshop module
+
+
+"""
+
+import abc, importlib, collections, shlex
+
+_supported_machmods = OrderedDict({
+    "cuda": "cudahip",
+    "hip": "cudahip",
+    "pthread": "pthread",
+})
+
+_loadded_machmods = {
+}
+
+
+class Workshop(object):
+    """Errand workshop class
+
+"""
+
+    def __init__(self, inargs, outargs, order, compile=None):
+
+        self.inargs = inargs
+        self.outargs = outargs
+        self.order = order
+        self.compile = shlex.split(compile) if isinstance(compile,
+                            str) else compile
+        self.machine = None
+
+    def select_machine(self, gofers):
+
+        for modname, mod in _supported_machmods.items():
+            if modname not in _loaded_machmods:
+                _loaded_machmods[modname] = importlib.import_module(mod)
+
+            select = getattr(_loaded_machmods[modname], "select_machine", None)
+
+            if select:
+                for mach in select(gofers, self.compile, self.order): 
+                    self.machine = mach
+
+                    yield self.machine
+
+        if self.machine is None:
+            raise Exception("No supported resource is available")
+
+    def close(self):
+
+        if self.machine:
+            res = self.machine.d2hcopy(self.outargs)
+            self.machine = None
+
+
+class MachineBase(abc.ABC):
+
+    def __new__(cls, worker, compile, order):
+
+        obj = super(MachineBase, cls).__new__(cls)
+
+        obj.compile = compile
+        obj.worker = worker
+        obj.order = order 
+
+        return obj
+
+    @abc.abstractmethod
+    def start(self, gofers):
+        pass
+
+    @abc.abstractmethod
+    def load(self):
+        pass
+
+    @abc.abstractmethod
+    def operate(self):
+        pass
+
+    @abc.abstractmethod
+    def unload(self):
+        pass
+
+    @abc.abstractmethod
+    def isbusy(self):
+        return False
+
+class CudaMachine(MachineBase):
+
+    default_compiler = "nvcc"
+    sharedlib_flags = "--compiler-options '-fPIC' --shared"
+    default_flags = ""
+
+    def check_compiler(self, compiler, pattern):
+        return False
+
+    def start(self, gofers):
+        pass
+
+    def load(self):
+        pass
+
+    def operate(self):
+        pass
+
+    def unload(self):
+        pass
+
+    def isbusy(self):
+        return False
+  
+
+class HipMachine(MachineBase):
+ 
+    config = (
+        ("hipcc", "-fPIC --shared", "", r"dsfdsfsd"),
+    )
+
+    def start(self, gofers):
+        pass
+
+    def load(self):
+        pass
+
+    def operate(self):
+        pass
+
+    def unload(self):
+        pass
+   
+    def isbusy(self):
+        return False
+
+class PthreadCppMachine(MachineBase):
+ 
+    default_compiler = "nvcc"
+    sharedlib_flags = ""
+    default_flags = ""
+
+    def check_compiler(self, compiler, pattern):
+        return False
+
+    def start(self, gofers):
+        pass
+
+    def load(self):
+        pass
+
+    def operate(self):
+        pass
+
+    def unload(self):
+        pass
+    
+    def isbusy(self):
+        return False
+    
+class OpenaccCppMachine(MachineBase):
+  
+    default_compiler = "nvcc"
+    sharedlib_flags = ""
+    default_flags = ""
+
+    def check_compiler(self, compiler, pattern):
+        return False
+
+    def start(self, gofers):
+        pass
+
+    def load(self):
+        pass
+
+    def operate(self):
+        pass
+
+    def unload(self):
+        pass
+   
+    def isbusy(self):
+        return False
+

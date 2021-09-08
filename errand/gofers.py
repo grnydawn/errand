@@ -58,9 +58,9 @@ class Gofers(object):
     def run(self, workshop):
 
         try:
-            for machine in workshop.select_machines(self.sizes):
+            for machine in workshop.select_machine():
 
-                machine.start()
+                machine.start(self.sizes)
 
                 machine.load()
 
@@ -76,6 +76,5 @@ class Gofers(object):
 
     def quit(self):
 
-        if self.machine:
-            self.machine.unload()
+        pass
 

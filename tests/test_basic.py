@@ -5,14 +5,14 @@ import pytest
 from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
-#test_compiles = ["cuda", "hip", "pthread"]
-#test_compiles = ["hip", "pthread", "openacc-c++"]
-#test_compiles = ["hip"]
-test_compiles = ["pthread"]
-#test_compiles = ["openacc-c++"]
+#test_backends = ["cuda", "hip", "pthread"]
+#test_backends = ["hip", "pthread", "openacc-c++"]
+test_backends = ["hip"]
+#test_backends = ["pthread"]
+#test_backends = ["openacc-c++"]
 
-@pytest.mark.parametrize("compile", test_compiles)
-def test_vecadd1d(compile):
+@pytest.mark.parametrize("backend", test_backends)
+def test_vecadd1d(backend):
 
     N = 100
 
@@ -41,7 +41,7 @@ def test_vecadd1d(compile):
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
         # workshop represents machine, input&output, order, and compile
-        workshop = erd.workshop(a, b, "->", c, compile=compile)
+        workshop = erd.workshop(a, b, "->", c, backend=backend)
 
         # logical worker entities
         # TODO: how to choose the best configuration per compile
@@ -57,8 +57,8 @@ def test_vecadd1d(compile):
     assert c.sum() == a.sum() + b.sum()
     #assert reduced_c == a.sum() + b.sum()
 
-@pytest.mark.parametrize("compile", test_compiles)
-def ttest_vecadd2d(compile):
+@pytest.mark.parametrize("backend", test_backends)
+def ttest_vecadd2d(backend):
 
     #NROW, NCOL = 2000, 300
     NROW, NCOL = 20, 3
@@ -71,7 +71,7 @@ def ttest_vecadd2d(compile):
 
     with Errand(order, timeout=5) as erd:
 
-        workshop = erd.workshop(a, b, "->", c, compile=compile)
+        workshop = erd.workshop(a, b, "->", c, backend=backend)
 
         gofers = erd.gofers(NCOL, NROW)
 
@@ -80,8 +80,8 @@ def ttest_vecadd2d(compile):
     assert np.array_equal(c, a+b)
 
 
-@pytest.mark.parametrize("compile", test_compiles)
-def ttest_vecadd3d(compile):
+@pytest.mark.parametrize("backend", test_backends)
+def ttest_vecadd3d(backend):
 
     #NROW, NCOL = 2000, 300
     X, Y, Z = 10, 3, 2
@@ -94,7 +94,7 @@ def ttest_vecadd3d(compile):
 
     with Errand(order, timeout=5) as erd:
 
-        workshop = erd.workshop(a, b, "->", c, compile=compile)
+        workshop = erd.workshop(a, b, "->", c, backend=backend)
 
         gofers = erd.gofers(Z, (X, Y))
 
@@ -102,8 +102,8 @@ def ttest_vecadd3d(compile):
 
     assert np.array_equal(c, a+b)
 
-@pytest.mark.parametrize("compile", test_compiles)
-def ttest_listadd2d(compile):
+@pytest.mark.parametrize("backend", test_backends)
+def ttest_listadd2d(backend):
 
     NROW = 2
     NCOL = 3
@@ -116,7 +116,7 @@ def ttest_listadd2d(compile):
 
     with Errand(order, timeout=5) as erd:
 
-        workshop = erd.workshop(a, b, "->", c, compile=compile)
+        workshop = erd.workshop(a, b, "->", c, backend=backend)
 
         gofers = erd.gofers(NCOL, NROW)
 

@@ -266,7 +266,7 @@ class Order(object):
    
         return ([], [])
 
-    def get_targetnames(self):
+    def get_backends(self):
 
         tnames = []
 
