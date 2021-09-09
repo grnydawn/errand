@@ -8,7 +8,7 @@ import numpy as np
 from numpy.ctypeslib import ndpointer, load_library
 from ctypes import c_int, c_longlong, c_float, c_double, c_size_t
 
-from errand.util import shellcmd
+from errand.util import shellcmd, split_compile
 
 _installed_backends = {}
 
@@ -370,7 +370,7 @@ def select_backends(backend, compile, order, workdir):
 
     selected = []
     targets = order.get_backends()
-
+        
     for tname in targets:
         if tname in _installed_backends:
             tempeng = _installed_backends[tname]
@@ -383,6 +383,10 @@ def select_backends(backend, compile, order, workdir):
                 s = tempeng
 
             if s is not None:
+
+                if compile is None:
+                    compile = split_compile(order.get_section(tname).arg)
+
                 b = s(workdir, compile)
                 if b.isavail():
                     selected.append(b)

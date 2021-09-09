@@ -27,7 +27,8 @@ class Compiler(abc.ABC):
                 self.version is not None)
 
     def set_version(self, version):
-        if self.check_version(version):
+
+        if version and self.check_version(version):
             self.version = version
 
     @abc.abstractmethod
@@ -96,6 +97,22 @@ class CrayClang_CPP_Compiler(CPP_Compiler):
 
     def check_version(self, version):
         return version.startswith("Cray clang version")
+
+
+class IbmXl_CPP_Compiler(CPP_Compiler):
+
+    def __init__(self, path, flags):
+
+        if path is None:
+            path = which("xlc++")
+
+        super(IbmXl_CPP_Compiler, self).__init__(path, flags)
+
+    def get_option(self):
+        return "-shared " + super(IbmXl_CPP_Compiler, self).get_option()
+
+    def check_version(self, version):
+        return version.startswith("IBM XL C/C++")
 
 
 class Pthread_GNU_CPP_Compiler(GNU_CPP_Compiler):
@@ -204,7 +221,9 @@ class Compilers(object):
         for cls in clist:
             try:
                 if compile:
-                    self.clist.append(cls(which(compile[0]), compile[1:]))
+                    path = which(compile[0])
+                    if path:
+                        self.clist.append(cls(path, compile[1:]))
 
                 else:
                     self.clist.append(cls(None, None))
