@@ -114,26 +114,26 @@ class HIP_CPP_Compiler(CPP_Compiler):
 
 class Compilers(object):
 
-    def __init__(self, engine):
+    def __init__(self, backend):
 
         self.clist = []
 
         clist = []
 
-        if engine == "pthread":
+        if backend == "pthread":
             clist =  [Pthread_GNU_CPP_Compiler]
 
-        elif engine == "cuda":
+        elif backend == "cuda":
             clist =  [CUDA_CPP_Compiler]
 
-        elif engine == "hip":
+        elif backend == "hip":
             clist =  [HIP_CPP_Compiler]
 
-        elif engine == "openacc-c++":
+        elif backend == "openacc-c++":
             clist =  [OpenAcc_GNU_CPP_Compiler]
 
         else:
-            raise Exception("Compiler for '%s' is not supported." % engine)
+            raise Exception("Compiler for '%s' is not supported." % backend)
 
         for cls in clist:
             try:

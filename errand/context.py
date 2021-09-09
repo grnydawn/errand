@@ -8,7 +8,6 @@ import time, inspect
 from numpy import ndarray, asarray
 
 from errand.order import Order
-from errand.engine import select_engine
 from errand.gofers import Gofers
 from errand.workshop import Workshop
 
@@ -20,7 +19,7 @@ class Context(object):
 
 """
 
-    def __init__(self, order, workdir, engine=None, context=None, timeout=None):
+    def __init__(self, order, workdir, context=None, timeout=None):
 
         # TODO: config data
         # TODO: documentation
@@ -35,8 +34,8 @@ class Context(object):
         # TODO: testing support
         # TODO: optimization support
         # TODO: documentation support
-        # TODO: plugin engines
-        # TODO: registry for engines, orders, sharedlibs, etc.
+        # TODO: plugin backend
+        # TODO: registry for backends, orders, sharedlibs, etc.
         # TODO: order template generation for informing mapping from teams/gofers to language specfic interpretation, and data movements, and shared/private variables, ...
         # TODO: basic approaches: user focuses on computation. clear/simple/reasonable role of Errand
 
@@ -47,7 +46,6 @@ class Context(object):
         self.order = order if isinstance(order, Order) else Order(order, self._env)
 
         self.workdir = workdir
-        self.engines = [e(workdir) for e in select_engine(engine, self.order)]
         self.context = context
         self.timeout = timeout
 
@@ -116,17 +114,10 @@ class Context(object):
 
         inargs, outargs = self._split_arguments(vargs, caller_args)
 
-        engines = [e for e in self.engines if e.isavail()]
+        ws = Workshop(inargs, outargs, self.order, self.workdir, **kwargs)
+        self.tasks[ws] = {}
 
-        if engines:
-            ws = Workshop(inargs, outargs, self.order, engines,
-                            self.workdir, **kwargs)
-            self.tasks[ws] = {}
-
-            return ws
-
-        else:
-            raise Exception("No engine is available")
+        return ws
 
 
     def shutdown(self):

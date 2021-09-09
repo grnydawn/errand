@@ -1,4 +1,4 @@
-"""Errand Pthread engine module
+"""Errand Pthread backend module
 
 
 """
@@ -6,7 +6,7 @@
 import os
 import numpy
 
-from errand.engine import Engine, varclass_template
+from errand.backend import Backend, varclass_template
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
@@ -128,7 +128,7 @@ calldevmain_template = """
 
 """
 
-class PThreadEngine(Engine):
+class PThreadBackend(Backend):
 
     name = "pthread"
     codeext = "cpp"
@@ -139,7 +139,7 @@ class PThreadEngine(Engine):
         compilers = Compilers(self.name)
         targetsystem = select_system("cpu")
 
-        super(PThreadEngine, self).__init__(workdir, compilers,
+        super(PThreadBackend, self).__init__(workdir, compilers,
             targetsystem)
 
     #def compiler_option(self):

@@ -1,11 +1,11 @@
-"""Errand Cuda and Hip engine module
+"""Errand Cuda and Hip backend module
 
 
 """
 
 import os
 
-from errand.engine import Engine, varclass_template
+from errand.backend import Backend, varclass_template
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
@@ -126,11 +126,11 @@ calldevmain_template = """
     _kernel<<<TEAM_SIZE, MEMBER_SIZE>>>({args});
 """
 
-class CudaHipEngine(Engine):
+class CudaHipBackend(Backend):
 
     def __init__(self, workdir, compilers, targetsystem):
 
-        super(CudaHipEngine, self).__init__(workdir, compilers,
+        super(CudaHipBackend, self).__init__(workdir, compilers,
                 targetsystem)
 
     def getname_h2dcopy(self, arg):
@@ -294,7 +294,7 @@ class CudaHipEngine(Engine):
         return "    isfinished = 1;";
 
 
-class CudaEngine(CudaHipEngine):
+class CudaBackend(CudaHipBackend):
 
     name = "cuda"
     codeext = "cu"
@@ -305,7 +305,7 @@ class CudaEngine(CudaHipEngine):
         compilers = Compilers(self.name)
         targetsystem = select_system("nvidia-gpu")
 
-        super(CudaEngine, self).__init__(workdir, compilers,
+        super(CudaBackend, self).__init__(workdir, compilers,
             targetsystem)
 
     def code_header(self):
@@ -329,7 +329,7 @@ class CudaEngine(CudaHipEngine):
             return cuda_d2hcopy_template
 
 
-class HipEngine(CudaHipEngine):
+class HipBackend(CudaHipBackend):
 
     name = "hip"
     codeext = "hip.cpp"
@@ -340,7 +340,7 @@ class HipEngine(CudaHipEngine):
         compilers = Compilers(self.name)
         targetsystem = select_system("amd-gpu")
 
-        super(HipEngine, self).__init__(workdir, compilers,
+        super(HipBackend, self).__init__(workdir, compilers,
             targetsystem)
 
     def code_header(self):

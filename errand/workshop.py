@@ -7,40 +7,42 @@ import time
 
 from collections import OrderedDict
 
+from errand.backend import select_backend
 
 class Workshop(object):
     """Errand workshop class
 
 """
 
-    def __init__(self, inargs, outargs, order, engines, workdir):
+    def __init__(self, inargs, outargs, order, workdir, backend=None):
 
         self.inargs = inargs
         self.outargs = outargs
         self.order = order
-        self.engines = engines
-        self.curengine = None
+        backends = [b(workdir) for b in select_backend(backend, self.order)]
+        self.backends = [b for b in backends if b.isavail()]
+        self.curbackend = None
         self.workdir = workdir
         self.code = None
 
-    def set_engine(self, engine):
-        self.curengine = engine
+    def set_backend(self, backend):
+        self.curbackend = backend
 
-    def start_engine(self, engine, nteams, nmembers, nassigns):
+    def start_backend(self, backend, nteams, nmembers, nassigns):
 
-        self.code = engine.gencode(nteams, nmembers, nassigns, self.inargs,
+        self.code = backend.gencode(nteams, nmembers, nassigns, self.inargs,
                         self.outargs, self.order)
 
-        engine.h2dcopy(self.inargs, self.outargs)
+        backend.h2dcopy(self.inargs, self.outargs)
 
         res = self.code.run()
 
         if res == 0:
-            self.curengine = engine
+            self.curbackend = backend
             return res
 
         else:
-            raise Exception("Engine is not started.") 
+            raise Exception("Backend is not started.") 
 
 
     def open(self, nteams, nmembers, nassigns):
@@ -49,17 +51,17 @@ class Workshop(object):
 
         try:
 
-            if self.curengine is not None:
-                return self.start_engine(engine, nteams, nmembers, nassigns)
+            if self.curbackend is not None:
+                return self.start_backend(backend, nteams, nmembers, nassigns)
 
             else:
-                for engine in self.engines:
-                    return self.start_engine(engine, nteams, nmembers, nassigns)
+                for backend in self.backends:
+                    return self.start_backend(backend, nteams, nmembers, nassigns)
  
         except Exception as e:
             pass
 
-        raise Exception("No engine started.")
+        raise Exception("No backend started.")
 
     # assumes that code.run() is async
     def close(self, timeout=None):
@@ -72,9 +74,9 @@ class Workshop(object):
 
             time.sleep(0.1)
 
-        if self.curengine is None:
-            raise Exception("No selected engine")
+        if self.curbackend is None:
+            raise Exception("No selected backend")
 
-        res = self.curengine.d2hcopy(self.outargs)
+        res = self.curbackend.d2hcopy(self.outargs)
 
         return res

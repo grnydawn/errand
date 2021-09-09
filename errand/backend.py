@@ -1,4 +1,4 @@
-"""Errand engine module
+"""Errand backend module
 
 
 """
@@ -10,7 +10,7 @@ from ctypes import c_int, c_longlong, c_float, c_double, c_size_t
 
 from errand.util import shellcmd
 
-_installed_engines = {}
+_installed_backends = {}
 
 varclass_template = """
 class {vartype} {{
@@ -55,8 +55,8 @@ public:
 """
 
 
-class Engine(abc.ABC):
-    """Errand Engine class
+class Backend(abc.ABC):
+    """Errand Backend class
 
     * keep as transparent and passive as possible
 """
@@ -345,35 +345,35 @@ extern "C" int run() {{
                 self._copy2orgdata(arg)
 
 
-def select_engine(engine, order):
+def select_backend(backend, order):
 
-    if len(_installed_engines) == 0:
-        from errand.cuda_hip import CudaEngine, HipEngine
-        from errand.pthread import PThreadEngine
-        from errand.openacc import OpenAccCppEngine
+    if len(_installed_backends) == 0:
+        from errand.cuda_hip import CudaBackend, HipBackend
+        from errand.pthread import PThreadBackend
+        from errand.openacc import OpenAccCppBackend
 
-        _installed_engines[CudaEngine.name] = CudaEngine
-        _installed_engines[HipEngine.name] = HipEngine
-        _installed_engines[PThreadEngine.name] = PThreadEngine
-        _installed_engines[OpenAccCppEngine.name] = OpenAccCppEngine
+        _installed_backends[CudaBackend.name] = CudaBackend
+        _installed_backends[HipBackend.name] = HipBackend
+        _installed_backends[PThreadBackend.name] = PThreadBackend
+        _installed_backends[OpenAccCppBackend.name] = OpenAccCppBackend
 
     candidate = None
 
-    if isinstance(engine, Engine):
-        candidate = engine.__class__
+    if isinstance(backend, Backend):
+        candidate = backend.__class__
 
-    if candidate is None and isinstance(engine, str):
-        if engine in _installed_engines:
-            candidate = _installed_engines[engine]
+    if candidate is None and isinstance(backend, str):
+        if backend in _installed_backends:
+            candidate = _installed_backends[backend]
         else:
-            raise Exception("%s engine is not installed." % str(engine))
+            raise Exception("%s backend is not installed." % str(backend))
 
     selected = []
     targets = order.get_targetnames()
 
     for tname in targets:
-        if tname in _installed_engines:
-            tempeng = _installed_engines[tname]
+        if tname in _installed_backends:
+            tempeng = _installed_backends[tname]
 
             if candidate is not None:
                 if candidate is tempeng:
@@ -382,15 +382,15 @@ def select_engine(engine, order):
                 selected.append(tempeng)
 
     if len(selected) == 0:
-        if engine is None:
-            raise Exception(("A compiler for any of these errand engines (%s)"
+        if backend is None:
+            raise Exception(("A compiler for any of these errand backends (%s)"
                     "is not found on this system.") %
-                    ", ".join(_installed_engines.keys()))
+                    ", ".join(_installed_backends.keys()))
 
         elif candidate is not None:
-            raise Exception("No errand order for the engine: %s" % str(engine))
+            raise Exception("No errand order for the backend: %s" % str(backend))
 
         else:
-            raise Exception("Unknown engine: %s" % str(engine))
+            raise Exception("Unknown backend: %s" % str(backend))
     else:
         return selected
