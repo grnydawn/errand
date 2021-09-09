@@ -124,6 +124,7 @@ extern "C" int run() {{
         self.hostsystem = None
         self.targetsystem = targetsystem
 
+    # TODO: need update to support multiple compilers and target systems
     def isavail(self):
         return (self.compilers is not None and self.compilers.isavail() and
                 self.targetsystem is not None and self.targetsystem.isavail())
@@ -345,7 +346,7 @@ extern "C" int run() {{
                 self._copy2orgdata(arg)
 
 
-def select_backend(backend, order):
+def select_backends(backend, compile, order, workdir):
 
     if len(_installed_backends) == 0:
         from errand.cuda_hip import CudaBackend, HipBackend
@@ -369,17 +370,23 @@ def select_backend(backend, order):
             raise Exception("%s backend is not installed." % str(backend))
 
     selected = []
-    targets = order.get_targetnames()
+    targets = order.get_backends()
 
     for tname in targets:
         if tname in _installed_backends:
             tempeng = _installed_backends[tname]
+            s = None
 
             if candidate is not None:
                 if candidate is tempeng:
-                    selected.append(tempeng)
+                    s = tempeng
             else:
-                selected.append(tempeng)
+                s = tempeng
+
+            if s is not None:
+                b = s(workdir, compile)
+                if b.isavail():
+                    selected.append(b)
 
     if len(selected) == 0:
         if backend is None:

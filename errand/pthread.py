@@ -76,6 +76,8 @@ void * _kernel(void * ptr){{
     {body}
 
     args->state = 2;
+
+    return NULL;
 }}
 """
 
@@ -92,6 +94,8 @@ void * _join(void * ptr){{
     }}
 
     isfinished = 1;
+
+    return NULL;
 }}
 """
 
@@ -134,9 +138,9 @@ class PThreadBackend(Backend):
     codeext = "cpp"
     libext = "so"
 
-    def __init__(self, workdir):
+    def __init__(self, workdir, compile):
 
-        compilers = Compilers(self.name)
+        compilers = Compilers(self.name, compile)
         targetsystem = select_system("cpu")
 
         super(PThreadBackend, self).__init__(workdir, compilers,

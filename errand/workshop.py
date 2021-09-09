@@ -7,26 +7,24 @@ import time
 
 from collections import OrderedDict
 
-from errand.backend import select_backend
+from errand.util import split_compile
+from errand.backend import select_backends
 
 class Workshop(object):
     """Errand workshop class
 
 """
 
-    def __init__(self, inargs, outargs, order, workdir, backend=None):
+    def __init__(self, inargs, outargs, order, workdir, backend=None, compile=None):
 
         self.inargs = inargs
         self.outargs = outargs
         self.order = order
-        backends = [b(workdir) for b in select_backend(backend, self.order)]
-        self.backends = [b for b in backends if b.isavail()]
+        self.compile = split_compile(compile)
+        self.backends = select_backends(backend, self.compile, self.order, workdir)
         self.curbackend = None
         self.workdir = workdir
         self.code = None
-
-    def set_backend(self, backend):
-        self.curbackend = backend
 
     def start_backend(self, backend, nteams, nmembers, nassigns):
 
@@ -49,17 +47,13 @@ class Workshop(object):
 
         self.start = time.time()
 
-        try:
-
-            if self.curbackend is not None:
+        for backend in self.backends:
+            try:
                 return self.start_backend(backend, nteams, nmembers, nassigns)
-
-            else:
-                for backend in self.backends:
-                    return self.start_backend(backend, nteams, nmembers, nassigns)
- 
-        except Exception as e:
-            pass
+            except Exception as e:
+                print("backend '%s' is not workiing." % backend.name)
+                # try multiple kinds of multiple backends
+                pass
 
         raise Exception("No backend started.")
 

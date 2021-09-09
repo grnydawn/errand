@@ -1,6 +1,6 @@
 '''Errand utility module'''
 
-import os, ast
+import os, ast, shlex
 from collections import OrderedDict
 import subprocess as subp
 
@@ -116,3 +116,10 @@ def shellcmd(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE,
     return subp.run(cmd, shell=shell, stdout=stdout, stderr=stderr,
                     check=check)
 
+def split_compile(compile):
+
+    if isinstance(compile, str):
+        return shlex.split(compile)
+
+    else:
+        return compile

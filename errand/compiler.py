@@ -8,6 +8,7 @@ from errand.util import which, shellcmd
 
 re_gcc_version = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d)+")
 
+
 class Compiler(abc.ABC):
     """Parent class for all compiler classes
 
@@ -57,10 +58,29 @@ class GNU_CPP_Compiler(CPP_Compiler):
         return "-shared -fPIC " + super(GNU_CPP_Compiler, self).get_option()
 
 
+class CrayClang_CPP_Compiler(CPP_Compiler):
+
+    def __init__(self, path=None):
+
+        if path is None:
+            path = which("CC")
+
+        super(CrayClang_CPP_Compiler, self).__init__(path)
+
+    def get_option(self):
+        return "-shared " + super(CrayClang_CPP_Compiler, self).get_option()
+
+
 class Pthread_GNU_CPP_Compiler(GNU_CPP_Compiler):
 
     def get_option(self):
         return "-pthread " + super(Pthread_GNU_CPP_Compiler, self).get_option()
+
+
+class Pthread_CrayClang_CPP_Compiler(CrayClang_CPP_Compiler):
+
+    def get_option(self):
+        return "-pthread " + super(Pthread_CrayClang_CPP_Compiler, self).get_option()
 
 
 class OpenAcc_GNU_CPP_Compiler(Pthread_GNU_CPP_Compiler):
@@ -114,14 +134,14 @@ class HIP_CPP_Compiler(CPP_Compiler):
 
 class Compilers(object):
 
-    def __init__(self, backend):
+    def __init__(self, backend, compile):
 
         self.clist = []
 
         clist = []
 
         if backend == "pthread":
-            clist =  [Pthread_GNU_CPP_Compiler]
+            clist =  [Pthread_GNU_CPP_Compiler, Pthread_CrayClang_CPP_Compiler]
 
         elif backend == "cuda":
             clist =  [CUDA_CPP_Compiler]
@@ -137,7 +157,11 @@ class Compilers(object):
 
         for cls in clist:
             try:
-                self.clist.append(cls())
+                if compile:
+                    self.clist.append(cls(path=which(compile[0])))
+
+                else:
+                    self.clist.append(cls())
 
             except Exception as err:
                 pass

@@ -266,9 +266,9 @@ class Order(object):
    
         return ([], [])
 
-    def get_targetnames(self):
+    def get_backends(self):
 
-        tnames = []
+        names = []
 
         for secname, slist in self.sections.items():
             if secname.startswith("_") or secname == "signature":
@@ -277,9 +277,9 @@ class Order(object):
             sec = slist.select_one(self._env)
 
             if isinstance(sec, Section):
-                tnames.append(secname)
+                names.append(secname)
 
-        return tnames
+        return names
 
     def get_section(self, name):
 
