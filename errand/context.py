@@ -4,7 +4,7 @@ Define Errand context
 
 """
 
-import time, inspect
+import time, inspect, shutil, tempfile
 from numpy import ndarray, asarray
 
 from errand.order import Order
@@ -13,14 +13,20 @@ from errand.workshop import Workshop
 
 from errand.util import errand_builtins
 
+# TODO: supports eval, attributes in order
+# TODO: supports compiler hierachies with compiler wrappers
 
-class Context(object):
-    """Context class: provides consistent interface of Errand
 
+class Errand(object):
+    """Errand class
+
+* Out of context, OS-related tasks here
 """
 
-    def __init__(self, order, workdir, context=None, timeout=None):
+    def __init__(self, order, timeout=None):
 
+        self.tempdir = None
+ 
         # TODO: config data
         # TODO: documentation
         # TODO: examples
@@ -45,10 +51,19 @@ class Context(object):
 
         self.order = order if isinstance(order, Order) else Order(order, self._env)
 
-        self.workdir = workdir
-        self.context = context
         self.timeout = timeout
+     
+    def __enter__(self):
 
+        self.tempdir = tempfile.mkdtemp()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+
+        self.shutdown()
+
+        if self.tempdir:
+            shutil.rmtree(self.tempdir)
 
     def gofers(self, *vargs):
 
@@ -114,7 +129,7 @@ class Context(object):
 
         inargs, outargs = self._split_arguments(vargs, caller_args)
 
-        ws = Workshop(inargs, outargs, self.order, self.workdir, **kwargs)
+        ws = Workshop(inargs, outargs, self.order, self.tempdir, **kwargs)
         self.tasks[ws] = {}
 
         return ws
