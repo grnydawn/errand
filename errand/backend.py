@@ -398,7 +398,12 @@ def select_backends(backend, compile, order, workdir):
                     ", ".join(_installed_backends.keys()))
 
         elif candidate is not None:
-            raise Exception("No errand order for the backend: %s" % str(backend))
+
+            if backend not in targets:
+                raise Exception("Backend, '%s' is not specified in order." % str(backend))
+
+            else:
+                raise Exception("Backend, '%s' is not supported by the system." % str(backend))
 
         else:
             raise Exception("Unknown backend: %s" % str(backend))

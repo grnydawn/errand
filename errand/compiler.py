@@ -37,114 +37,134 @@ class Compiler(abc.ABC):
 
     def get_version(self):
         ver = shellcmd("%s --version" % self.path).stdout.decode()
-        return ver if ver else None
+        return ver.strip() if ver else None
 
     @abc.abstractmethod
     def check_version(self, version):
         return False
 
 
-class CPP_Compiler(Compiler):
+class Cpp_Compiler(Compiler):
 
     def __init__(self, path, flags):
-        super(CPP_Compiler, self).__init__(path, flags)
+        super(Cpp_Compiler, self).__init__(path, flags)
 
 
-class GNU_CPP_Compiler(CPP_Compiler):
+class Gnu_Cpp_Compiler(Cpp_Compiler):
 
     def __init__(self, path, flags):
 
         if path is None:
             path = which("g++")
 
-        super(GNU_CPP_Compiler, self).__init__(path, flags)
+        super(Gnu_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self):
-        return "-shared -fPIC " + super(GNU_CPP_Compiler, self).get_option()
+        return "-shared -fPIC " + super(Gnu_Cpp_Compiler, self).get_option()
 
     def check_version(self, version):
 
         return version.startswith("g++ (GCC)")
 
 
-class AmdClang_CPP_Compiler(CPP_Compiler):
+class AmdClang_Cpp_Compiler(Cpp_Compiler):
 
     def __init__(self, path, flags):
 
         if path is None:
             path = which("CC")
 
-        super(AmdClang_CPP_Compiler, self).__init__(path, flags)
+        super(AmdClang_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self):
-        return "-shared " + super(AmdClang_CPP_Compiler, self).get_option()
+        return "-shared " + super(AmdClang_Cpp_Compiler, self).get_option()
 
     def check_version(self, version):
-        return version.startswith("clang version")
+        return version.startswith("clang version") and "roc" in version
 
 
-class CrayClang_CPP_Compiler(CPP_Compiler):
+class Pgi_Cpp_Compiler(Cpp_Compiler):
+
+    def __init__(self, path, flags):
+
+        if path is None:
+            path = which("pgc++")
+
+        super(Pgi_Cpp_Compiler, self).__init__(path, flags)
+
+    def get_option(self):
+        return "-shared " + super(Pgi_Cpp_Compiler, self).get_option()
+
+    def check_version(self, version):
+        return version.startswith("pgc++") and "PGI" in version
+
+
+class CrayClang_Cpp_Compiler(Cpp_Compiler):
 
     def __init__(self, path, flags):
 
         if path is None:
             path = which("CC")
 
-        super(CrayClang_CPP_Compiler, self).__init__(path, flags)
+        super(CrayClang_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self):
-        return "-shared " + super(CrayClang_CPP_Compiler, self).get_option()
+        return "-shared " + super(CrayClang_Cpp_Compiler, self).get_option()
 
     def check_version(self, version):
         return version.startswith("Cray clang version")
 
 
-class IbmXl_CPP_Compiler(CPP_Compiler):
+class IbmXl_Cpp_Compiler(Cpp_Compiler):
 
     def __init__(self, path, flags):
 
         if path is None:
             path = which("xlc++")
 
-        super(IbmXl_CPP_Compiler, self).__init__(path, flags)
+        super(IbmXl_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self):
-        return "-shared " + super(IbmXl_CPP_Compiler, self).get_option()
+        return "-shared " + super(IbmXl_Cpp_Compiler, self).get_option()
 
     def check_version(self, version):
         return version.startswith("IBM XL C/C++")
 
 
-class Pthread_GNU_CPP_Compiler(GNU_CPP_Compiler):
+class Pthread_Gnu_Cpp_Compiler(Gnu_Cpp_Compiler):
 
     def get_option(self):
-        return "-pthread " + super(Pthread_GNU_CPP_Compiler, self).get_option()
+        return "-pthread " + super(Pthread_Gnu_Cpp_Compiler, self).get_option()
 
 
-class Pthread_CrayClang_CPP_Compiler(CrayClang_CPP_Compiler):
-
-    def get_option(self):
-        return "-pthread " + super(Pthread_CrayClang_CPP_Compiler, self).get_option()
-
-
-class Pthread_AmdClang_CPP_Compiler(AmdClang_CPP_Compiler):
+class Pthread_CrayClang_Cpp_Compiler(CrayClang_Cpp_Compiler):
 
     def get_option(self):
-        return "-pthread " + super(Pthread_AmdClang_CPP_Compiler, self).get_option()
+        return "-pthread " + super(Pthread_CrayClang_Cpp_Compiler, self).get_option()
 
 
-class OpenAcc_GNU_CPP_Compiler(Pthread_GNU_CPP_Compiler):
+class Pthread_AmdClang_Cpp_Compiler(AmdClang_Cpp_Compiler):
+
+    def get_option(self):
+        return "-pthread " + super(Pthread_AmdClang_Cpp_Compiler, self).get_option()
+
+
+class Pthread_Pgi_Cpp_Compiler(Pgi_Cpp_Compiler):
+
+    def get_option(self):
+        return "-lpthread " + super(Pthread_Pgi_Cpp_Compiler, self).get_option()
+
+
+class OpenAcc_Gnu_Cpp_Compiler(Pthread_Gnu_Cpp_Compiler):
 
     def __init__(self, path, flags):
 
-        super(OpenAcc_GNU_CPP_Compiler, self).__init__(path, flags)
-
-        self.version = self.get_version()
+        super(OpenAcc_Gnu_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self):
 
         return ("-fopenacc " +
-                super(OpenAcc_GNU_CPP_Compiler, self).get_option())
+                super(OpenAcc_Gnu_Cpp_Compiler, self).get_option())
 
     def check_version(self, version):
 
@@ -158,39 +178,62 @@ class OpenAcc_GNU_CPP_Compiler(Pthread_GNU_CPP_Compiler):
         return int(match.group("major")) >= 10
 
 
-class CUDA_CPP_Compiler(CPP_Compiler):
+class OpenAcc_CrayClang_Cpp_Compiler(Pthread_CrayClang_Cpp_Compiler):
+
+    def __init__(self, path, flags):
+
+        super(OpenAcc_CrayClang_Cpp_Compiler, self).__init__(path, flags)
+
+    def get_option(self):
+
+        return ("-h pragma=acc " +
+                super(OpenAcc_CrayClang_Cpp_Compiler, self).get_option())
+
+
+class OpenAcc_Pgi_Cpp_Compiler(Pthread_Pgi_Cpp_Compiler):
+
+    def __init__(self, path, flags):
+
+        super(OpenAcc_Pgi_Cpp_Compiler, self).__init__(path, flags)
+
+    def get_option(self):
+        return ("-acc " +
+                super(OpenAcc_Pgi_Cpp_Compiler, self).get_option())
+
+
+class Cuda_Cpp_Compiler(Cpp_Compiler):
 
     def __init__(self, path, flags):
 
         if path is None:
             path = which("nvcc")
 
-        super(CUDA_CPP_Compiler, self).__init__(path, flags)
+        super(Cuda_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self):
         return ("--compiler-options '-fPIC' --shared " +
-                super(CUDA_CPP_Compiler, self).get_option())
+                super(Cuda_Cpp_Compiler, self).get_option())
 
     def check_version(self, version):
         return version.startswith("nvcc: NVIDIA")
 
 
-class HIP_CPP_Compiler(CPP_Compiler):
+class Hip_Cpp_Compiler(Cpp_Compiler):
 
     def __init__(self, path, flags):
 
         if path is None:
             path = which("hipcc")
 
-        super(HIP_CPP_Compiler, self).__init__(path, flags)
+        super(Hip_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self):
 
         return ("-fPIC --shared " +
-                super(HIP_CPP_Compiler, self).get_option())
+                super(Hip_Cpp_Compiler, self).get_option())
 
     def check_version(self, version):
-        return version.startswith("HIP version")
+        return version.startswith("Hip version")
 
 
 
@@ -203,17 +246,18 @@ class Compilers(object):
         clist = []
 
         if backend == "pthread":
-            clist =  [Pthread_GNU_CPP_Compiler, Pthread_CrayClang_CPP_Compiler,
-                      Pthread_AmdClang_CPP_Compiler]
+            clist =  [Pthread_Gnu_Cpp_Compiler, Pthread_CrayClang_Cpp_Compiler,
+                      Pthread_AmdClang_Cpp_Compiler, Pthread_Pgi_Cpp_Compiler]
 
         elif backend == "cuda":
-            clist =  [CUDA_CPP_Compiler]
+            clist =  [Cuda_Cpp_Compiler]
 
         elif backend == "hip":
-            clist =  [HIP_CPP_Compiler]
+            clist =  [Hip_Cpp_Compiler]
 
         elif backend == "openacc-c++":
-            clist =  [OpenAcc_GNU_CPP_Compiler]
+            clist =  [OpenAcc_Gnu_Cpp_Compiler, OpenAcc_CrayClang_Cpp_Compiler,
+                      OpenAcc_Pgi_Cpp_Compiler]
 
         else:
             raise Exception("Compiler for '%s' is not supported." % backend)

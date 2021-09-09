@@ -83,7 +83,7 @@ vector_length({veclen})
 }}
 
 #pragma acc update self ({host_updates})
-#pragma acc end data delete({deletes})
+#pragma acc exit data delete({deletes})
 
     args->state = 2;
 
