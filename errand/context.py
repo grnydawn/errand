@@ -46,7 +46,7 @@ class Errand(object):
         # TODO: basic approaches: user focuses on computation. clear/simple/reasonable role of Errand
 
         self._env = dict(errand_builtins)
-        self.tasks = {} # contains workshops
+        self.workshops = {} # contains workshops
         self.result = [] # contains results from workshops
 
         self.order = order if isinstance(order, Order) else Order(order, self._env)
@@ -60,7 +60,8 @@ class Errand(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
 
-        self.shutdown()
+        for ws in self.workshops:
+            self.result.append(ws.close(timeout=self.timeout))
 
         if self.tempdir:
             shutil.rmtree(self.tempdir)
@@ -130,12 +131,6 @@ class Errand(object):
         inargs, outargs = self._split_arguments(vargs, caller_args)
 
         ws = Workshop(inargs, outargs, self.order, self.tempdir, **kwargs)
-        self.tasks[ws] = {}
+        self.workshops[ws] = {}
 
         return ws
-
-
-    def shutdown(self):
-
-        for ws in self.tasks:
-            self.result.append(ws.close(timeout=self.timeout))

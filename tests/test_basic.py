@@ -41,7 +41,7 @@ def test_vecadd1d(backend):
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
         # workshop represents machine, input&output, order, and backend
-        workshop = erd.workshop(a, b, "->", c, backend=backend, compile="CC")
+        workshop = erd.workshop(a, b, "->", c, backend=backend, compile="CC -O3")
 
         # logical worker entities
         # TODO: how to choose the best configuration per backend

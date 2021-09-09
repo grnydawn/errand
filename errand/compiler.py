@@ -6,8 +6,6 @@ import os, abc, re
 
 from errand.util import which, shellcmd
 
-re_gcc_version = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d)+")
-
 
 class Compiler(abc.ABC):
     """Parent class for all compiler classes
@@ -22,21 +20,26 @@ class Compiler(abc.ABC):
     def isavail(self):
 
         if self.version is None:
-            self.version = self.get_version()
+            self.set_version(self.get_version())
 
         return (self.path is not None and os.path.isfile(self.path) and
                 self.version is not None)
+
+    def set_version(self, version):
+        if self.check_version(version):
+            self.version = version
 
     @abc.abstractmethod
     def get_option(self):
         return ""
 
     def get_version(self):
-
         ver = shellcmd("%s --version" % self.path).stdout.decode()
-
         return ver if ver else None
 
+    @abc.abstractmethod
+    def check_version(self, version):
+        return False
 
 
 class CPP_Compiler(Compiler):
@@ -57,6 +60,26 @@ class GNU_CPP_Compiler(CPP_Compiler):
     def get_option(self):
         return "-shared -fPIC " + super(GNU_CPP_Compiler, self).get_option()
 
+    def check_version(self, version):
+
+        return version.startswith("g++ (GCC)")
+
+
+class AmdClang_CPP_Compiler(CPP_Compiler):
+
+    def __init__(self, path=None):
+
+        if path is None:
+            path = which("CC")
+
+        super(AmdClang_CPP_Compiler, self).__init__(path)
+
+    def get_option(self):
+        return "-shared " + super(AmdClang_CPP_Compiler, self).get_option()
+
+    def check_version(self, version):
+        return version.startswith("clang version")
+
 
 class CrayClang_CPP_Compiler(CPP_Compiler):
 
@@ -69,6 +92,9 @@ class CrayClang_CPP_Compiler(CPP_Compiler):
 
     def get_option(self):
         return "-shared " + super(CrayClang_CPP_Compiler, self).get_option()
+
+    def check_version(self, version):
+        return version.startswith("Cray clang version")
 
 
 class Pthread_GNU_CPP_Compiler(GNU_CPP_Compiler):
@@ -83,6 +109,12 @@ class Pthread_CrayClang_CPP_Compiler(CrayClang_CPP_Compiler):
         return "-pthread " + super(Pthread_CrayClang_CPP_Compiler, self).get_option()
 
 
+class Pthread_AmdClang_CPP_Compiler(AmdClang_CPP_Compiler):
+
+    def get_option(self):
+        return "-pthread " + super(Pthread_AmdClang_CPP_Compiler, self).get_option()
+
+
 class OpenAcc_GNU_CPP_Compiler(Pthread_GNU_CPP_Compiler):
 
     def __init__(self, path=None):
@@ -91,19 +123,21 @@ class OpenAcc_GNU_CPP_Compiler(Pthread_GNU_CPP_Compiler):
 
         self.version = self.get_version()
 
-        match = re_gcc_version.search(self.version)
-
-        if not match:
-            raise Exception("Can not parse GCC version string: %s" %
-                                str(self.version)) 
-        if int(match.group("major")) < 10:
-            raise Exception("Gcc version should be at least 10: %s" %
-                                str(self.version)) 
-
     def get_option(self):
 
         return ("-fopenacc " +
                 super(OpenAcc_GNU_CPP_Compiler, self).get_option())
+
+    def check_version(self, version):
+
+        pat = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d)+")
+
+        match = pat.search(version)
+
+        if not match:
+            return False
+
+        return int(match.group("major")) >= 10
 
 
 class CUDA_CPP_Compiler(CPP_Compiler):
@@ -118,6 +152,9 @@ class CUDA_CPP_Compiler(CPP_Compiler):
     def get_option(self):
         return "--compiler-options '-fPIC' --shared"
 
+    def check_version(self, version):
+        return version.startswith("nvcc: NVIDIA")
+
 
 class HIP_CPP_Compiler(CPP_Compiler):
 
@@ -131,6 +168,10 @@ class HIP_CPP_Compiler(CPP_Compiler):
     def get_option(self):
         return "-fPIC --shared"
 
+    def check_version(self, version):
+        return version.startswith("HIP version")
+
+
 
 class Compilers(object):
 
@@ -141,7 +182,8 @@ class Compilers(object):
         clist = []
 
         if backend == "pthread":
-            clist =  [Pthread_GNU_CPP_Compiler, Pthread_CrayClang_CPP_Compiler]
+            clist =  [Pthread_GNU_CPP_Compiler, Pthread_CrayClang_CPP_Compiler,
+                      Pthread_AmdClang_CPP_Compiler]
 
         elif backend == "cuda":
             clist =  [CUDA_CPP_Compiler]
@@ -168,7 +210,7 @@ class Compilers(object):
 
     def isavail(self):
 
-        return self.select_one() is not None        
+        return self.select_one() is not None
 
     def select_one(self):
 
