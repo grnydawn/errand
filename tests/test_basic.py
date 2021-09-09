@@ -7,8 +7,11 @@ from errand import Errand
 here = os.path.dirname(os.path.abspath(__file__))
 #test_backends = ["cuda", "hip", "pthread"]
 #test_backends = ["hip", "pthread", "openacc-c++"]
-#test_backends = ["hip"]
-test_backends = ["pthread"]
+test_backends = ["hip"]
+#test_backends = ["cuda"]
+#test_backends = ["cuda", "pthread"]
+#test_backends = ["cuda", "pthread", "openacc-c++"]
+#test_backends = ["pthread"]
 #test_backends = ["openacc-c++"]
 
 @pytest.mark.parametrize("backend", test_backends)
@@ -41,7 +44,7 @@ def test_vecadd1d(backend):
         # KOKKOS is highly dependent on the concept of workload (iterations) than data view
 
         # workshop represents machine, input&output, order, and backend
-        workshop = erd.workshop(a, b, "->", c, backend=backend, compile="CC -O3")
+        workshop = erd.workshop(a, b, "->", c, backend=backend)
 
         # logical worker entities
         # TODO: how to choose the best configuration per backend

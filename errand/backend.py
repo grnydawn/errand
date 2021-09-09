@@ -240,17 +240,16 @@ extern "C" int run() {{
             f.write(code)
 
         # generate shared library
-        # TODO : automated compiler option selection
         # TODO : retry compilation for debug and performance optimization
+
+        libpath = os.path.join(self.workdir, fname + "." + self.libext)
 
         compiler = self.get_compiler()
         if compiler is None:
             raise Exception("Compiler is not available.")
 
-        libpath = os.path.join(self.workdir, fname + "." + self.libext)
-
-        options = compiler.get_option()
-        cmd = "%s %s -o %s %s" % (compiler.path, options, libpath, codepath)
+        cmd = "%s %s -o %s %s" % (compiler.path, compiler.get_option(), libpath,
+                                  codepath)
 
         #import pdb; pdb.set_trace()
         out = shellcmd(cmd)

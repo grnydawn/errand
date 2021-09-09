@@ -12,9 +12,10 @@ class Compiler(abc.ABC):
 
 """
 
-    def __init__(self, path):
+    def __init__(self, path, flags):
 
         self.path = path
+        self.flags = flags
         self.version = None
 
     def isavail(self):
@@ -31,7 +32,7 @@ class Compiler(abc.ABC):
 
     @abc.abstractmethod
     def get_option(self):
-        return ""
+        return " ".join(self.flags) if self.flags else ""
 
     def get_version(self):
         ver = shellcmd("%s --version" % self.path).stdout.decode()
@@ -44,18 +45,18 @@ class Compiler(abc.ABC):
 
 class CPP_Compiler(Compiler):
 
-    def __init__(self, path):
-        super(CPP_Compiler, self).__init__(path)
+    def __init__(self, path, flags):
+        super(CPP_Compiler, self).__init__(path, flags)
 
 
 class GNU_CPP_Compiler(CPP_Compiler):
 
-    def __init__(self, path=None):
+    def __init__(self, path, flags):
 
         if path is None:
             path = which("g++")
 
-        super(GNU_CPP_Compiler, self).__init__(path)
+        super(GNU_CPP_Compiler, self).__init__(path, flags)
 
     def get_option(self):
         return "-shared -fPIC " + super(GNU_CPP_Compiler, self).get_option()
@@ -67,12 +68,12 @@ class GNU_CPP_Compiler(CPP_Compiler):
 
 class AmdClang_CPP_Compiler(CPP_Compiler):
 
-    def __init__(self, path=None):
+    def __init__(self, path, flags):
 
         if path is None:
             path = which("CC")
 
-        super(AmdClang_CPP_Compiler, self).__init__(path)
+        super(AmdClang_CPP_Compiler, self).__init__(path, flags)
 
     def get_option(self):
         return "-shared " + super(AmdClang_CPP_Compiler, self).get_option()
@@ -83,12 +84,12 @@ class AmdClang_CPP_Compiler(CPP_Compiler):
 
 class CrayClang_CPP_Compiler(CPP_Compiler):
 
-    def __init__(self, path=None):
+    def __init__(self, path, flags):
 
         if path is None:
             path = which("CC")
 
-        super(CrayClang_CPP_Compiler, self).__init__(path)
+        super(CrayClang_CPP_Compiler, self).__init__(path, flags)
 
     def get_option(self):
         return "-shared " + super(CrayClang_CPP_Compiler, self).get_option()
@@ -117,9 +118,9 @@ class Pthread_AmdClang_CPP_Compiler(AmdClang_CPP_Compiler):
 
 class OpenAcc_GNU_CPP_Compiler(Pthread_GNU_CPP_Compiler):
 
-    def __init__(self, path=None):
+    def __init__(self, path, flags):
 
-        super(OpenAcc_GNU_CPP_Compiler, self).__init__(path)
+        super(OpenAcc_GNU_CPP_Compiler, self).__init__(path, flags)
 
         self.version = self.get_version()
 
@@ -142,15 +143,16 @@ class OpenAcc_GNU_CPP_Compiler(Pthread_GNU_CPP_Compiler):
 
 class CUDA_CPP_Compiler(CPP_Compiler):
 
-    def __init__(self, path=None):
+    def __init__(self, path, flags):
 
         if path is None:
             path = which("nvcc")
 
-        super(CUDA_CPP_Compiler, self).__init__(path)
+        super(CUDA_CPP_Compiler, self).__init__(path, flags)
 
     def get_option(self):
-        return "--compiler-options '-fPIC' --shared"
+        return ("--compiler-options '-fPIC' --shared " +
+                super(CUDA_CPP_Compiler, self).get_option())
 
     def check_version(self, version):
         return version.startswith("nvcc: NVIDIA")
@@ -158,15 +160,17 @@ class CUDA_CPP_Compiler(CPP_Compiler):
 
 class HIP_CPP_Compiler(CPP_Compiler):
 
-    def __init__(self, path=None):
+    def __init__(self, path, flags):
 
         if path is None:
             path = which("hipcc")
 
-        super(HIP_CPP_Compiler, self).__init__(path)
+        super(HIP_CPP_Compiler, self).__init__(path, flags)
 
     def get_option(self):
-        return "-fPIC --shared"
+
+        return ("-fPIC --shared " +
+                super(HIP_CPP_Compiler, self).get_option())
 
     def check_version(self, version):
         return version.startswith("HIP version")
@@ -200,10 +204,10 @@ class Compilers(object):
         for cls in clist:
             try:
                 if compile:
-                    self.clist.append(cls(path=which(compile[0])))
+                    self.clist.append(cls(which(compile[0]), compile[1:]))
 
                 else:
-                    self.clist.append(cls())
+                    self.clist.append(cls(None, None))
 
             except Exception as err:
                 pass

@@ -119,9 +119,9 @@ class OpenAccCppBackend(Backend):
     codeext = "cpp"
     libext = "so"
 
-    def __init__(self, workdir):
+    def __init__(self, workdir, compile):
 
-        compilers = Compilers(self.name)
+        compilers = Compilers(self.name, compile)
         targetsystem = select_system("cpu")
 
         super(OpenAccCppBackend, self).__init__(workdir, compilers,

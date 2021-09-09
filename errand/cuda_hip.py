@@ -300,9 +300,9 @@ class CudaBackend(CudaHipBackend):
     codeext = "cu"
     libext = "so"
 
-    def __init__(self, workdir):
+    def __init__(self, workdir, compile):
 
-        compilers = Compilers(self.name)
+        compilers = Compilers(self.name, compile)
         targetsystem = select_system("nvidia-gpu")
 
         super(CudaBackend, self).__init__(workdir, compilers,
@@ -335,9 +335,9 @@ class HipBackend(CudaHipBackend):
     codeext = "hip.cpp"
     libext = "so"
 
-    def __init__(self, workdir):
+    def __init__(self, workdir, compile):
 
-        compilers = Compilers(self.name)
+        compilers = Compilers(self.name, compile)
         targetsystem = select_system("amd-gpu")
 
         super(HipBackend, self).__init__(workdir, compilers,
