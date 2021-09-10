@@ -6,7 +6,7 @@
 import os
 import numpy
 
-from errand.backend import CppBackendBase, varclass_template
+from errand.backend import CppBackendBase, varclass_cpp_template
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
@@ -200,7 +200,7 @@ class CppBackend(CppBackendBase):
                 attrsize = self.len_numpyattrs(arg)
 
                 hvartype = self.getname_vartype(arg, "host")
-                dvsd[ndim] = varclass_template.format(vartype=hvartype, oparg=oparg,
+                dvsd[ndim] = varclass_cpp_template.format(vartype=hvartype, oparg=oparg,
                         offset=offset, funcprefix="", dtype=dname,
                         attrsize=attrsize)
 

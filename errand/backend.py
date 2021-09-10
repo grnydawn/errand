@@ -12,48 +12,6 @@ from errand.util import shellcmd, split_compile
 
 _installed_backends = {}
 
-varclass_template = """
-class {vartype} {{
-public:
-    {dtype} * data;
-    int * _attrs; // ndim, itemsize, size, shape, strides
-
-    {funcprefix} {dtype}& operator() ({oparg}) {{
-        int * s = &(_attrs[3+_attrs[0]]);
-        return data[{offset}];
-    }}
-    {funcprefix} {dtype} operator() ({oparg}) const {{
-        int * s = &(_attrs[3+_attrs[0]]);
-        return data[{offset}];
-    }}
-
-    {funcprefix} int ndim() {{
-        return _attrs[0];
-    }}
-    {funcprefix} int itemsize() {{
-        return _attrs[1];
-    }}
-    {funcprefix} int size() {{
-        return _attrs[2];
-    }}
-    {funcprefix} int shape(int dim) {{
-        return _attrs[3+dim];
-    }}
-    {funcprefix} int stride(int dim) {{
-        return _attrs[3+_attrs[0]+dim];
-    }}
-    {funcprefix} int unravel_index(int tid, int dim) {{
-        int q, r=tid, s;
-        for (int i = 0; i < dim + 1; i++) {{
-            s = stride(i);
-            q = r / s;
-            r = r % s;
-        }}
-        return q;
-    }}
-}};
-"""
-
 
 class Backend(abc.ABC):
 
@@ -71,7 +29,6 @@ class Backend(abc.ABC):
         self.hostsystem = None
         self.targetsystem = targetsystem
 
-    # TODO: need update to support multiple compilers and target systems
     def isavail(self):
         return (self.compilers is not None and self.compilers.isavail() and
                 self.targetsystem is not None and self.targetsystem.isavail())
@@ -414,3 +371,47 @@ def select_backends(backend, compile, order, workdir):
             raise Exception("Unknown backend: %s" % str(backend))
     else:
         return selected
+
+
+varclass_cpp_template = """
+class {vartype} {{
+public:
+    {dtype} * data;
+    int * _attrs; // ndim, itemsize, size, shape, strides
+
+    {funcprefix} {dtype}& operator() ({oparg}) {{
+        int * s = &(_attrs[3+_attrs[0]]);
+        return data[{offset}];
+    }}
+    {funcprefix} {dtype} operator() ({oparg}) const {{
+        int * s = &(_attrs[3+_attrs[0]]);
+        return data[{offset}];
+    }}
+
+    {funcprefix} int ndim() {{
+        return _attrs[0];
+    }}
+    {funcprefix} int itemsize() {{
+        return _attrs[1];
+    }}
+    {funcprefix} int size() {{
+        return _attrs[2];
+    }}
+    {funcprefix} int shape(int dim) {{
+        return _attrs[3+dim];
+    }}
+    {funcprefix} int stride(int dim) {{
+        return _attrs[3+_attrs[0]+dim];
+    }}
+    {funcprefix} int unravel_index(int tid, int dim) {{
+        int q, r=tid, s;
+        for (int i = 0; i < dim + 1; i++) {{
+            s = stride(i);
+            q = r / s;
+            r = r % s;
+        }}
+        return q;
+    }}
+}};
+"""
+

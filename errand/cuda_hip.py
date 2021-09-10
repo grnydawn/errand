@@ -5,7 +5,7 @@
 
 import os
 
-from errand.backend import CppBackendBase, varclass_template
+from errand.backend import CppBackendBase, varclass_cpp_template
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
@@ -187,12 +187,12 @@ class CudaHipBackend(CppBackendBase):
                 attrsize = self.len_numpyattrs(arg)
 
                 hvartype = self.getname_vartype(arg, "host")
-                out = varclass_template.format(vartype=hvartype, oparg=oparg,
+                out = varclass_cpp_template.format(vartype=hvartype, oparg=oparg,
                         offset=offset, funcprefix="", dtype=dname,
                         attrsize=attrsize)
 
                 dvartype = self.getname_vartype(arg, "dev")
-                out += varclass_template.format(vartype=dvartype, oparg=oparg,
+                out += varclass_cpp_template.format(vartype=dvartype, oparg=oparg,
                         offset=offset, funcprefix="__device__", dtype=dname,
                         attrsize = attrsize)
 
