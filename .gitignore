@@ -144,3 +144,5 @@ old
 *.exe
 *.so
 a.out
+.nfs*
+tests/.nfs*

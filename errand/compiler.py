@@ -233,7 +233,7 @@ class Hip_Cpp_Compiler(Cpp_Compiler):
                 super(Hip_Cpp_Compiler, self).get_option())
 
     def check_version(self, version):
-        return version.startswith("Hip version")
+        return version.startswith("HIP version")
 
 
 
