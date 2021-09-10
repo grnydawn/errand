@@ -56,9 +56,59 @@ public:
 
 
 class Backend(abc.ABC):
-    pass
 
-class CppBackendBase(abc.ABC):
+    def __init__(self, workdir, compilers, targetsystem):
+
+        self.workdir = workdir
+        self.sharedlib = None
+        self.nteams = None
+        self.nmembers = None
+        self.nassigns = None
+        self.inargs = None
+        self.outargs = None
+        self.order = None
+        self.compilers = compilers
+        self.hostsystem = None
+        self.targetsystem = targetsystem
+
+    # TODO: need update to support multiple compilers and target systems
+    def isavail(self):
+        return (self.compilers is not None and self.compilers.isavail() and
+                self.targetsystem is not None and self.targetsystem.isavail())
+
+    def get_compiler(self):
+        
+        return self.compilers.select_one()
+
+    def getname_argpair(self, arg):
+        return (arg["data"].ndim, self.getname_ctype(arg))
+
+    def get_ctype(self, arg):
+       
+        return self.dtypemap[arg["data"].dtype.name][1]
+
+    def getname_ctype(self, arg):
+       
+        return self.dtypemap[arg["data"].dtype.name][0]
+
+    @abc.abstractmethod
+    def getname_h2dcopy(self, arg):
+        pass
+      
+    @abc.abstractmethod
+    def getname_h2dmalloc(self, arg):
+        pass
+
+    @abc.abstractmethod
+    def getname_d2hcopy(self, arg):
+        pass
+
+    @abc.abstractmethod
+    def get_numpyattrs(self, arg):
+        pass
+
+
+class CppBackendBase(Backend):
     """Errand Backend class
 
     * keep as transparent and passive as possible
@@ -113,29 +163,6 @@ extern "C" int run() {{
         "float64": ["double", c_double]
     }
 
-    def __init__(self, workdir, compilers, targetsystem):
-
-        self.workdir = workdir
-        self.sharedlib = None
-        self.nteams = None
-        self.nmembers = None
-        self.nassigns = None
-        self.inargs = None
-        self.outargs = None
-        self.order = None
-        self.compilers = compilers
-        self.hostsystem = None
-        self.targetsystem = targetsystem
-
-    # TODO: need update to support multiple compilers and target systems
-    def isavail(self):
-        return (self.compilers is not None and self.compilers.isavail() and
-                self.targetsystem is not None and self.targetsystem.isavail())
-
-    def get_compiler(self):
-        
-        return self.compilers.select_one()
-
     def code_top(self):
         return ""
 
@@ -182,17 +209,6 @@ extern "C" int run() {{
 
     def code_tail(self):
         return ""
-
-    def getname_argpair(self, arg):
-        return (arg["data"].ndim, self.getname_ctype(arg))
-
-    def get_ctype(self, arg):
-       
-        return self.dtypemap[arg["data"].dtype.name][1]
-
-    def getname_ctype(self, arg):
-       
-        return self.dtypemap[arg["data"].dtype.name][0]
  
     def gencode(self, nteams, nmembers, nassigns, inargs, outargs, order):
 
@@ -276,22 +292,6 @@ extern "C" int run() {{
 
         #return the library 
         return self.sharedlib
-        
-    @abc.abstractmethod
-    def getname_h2dcopy(self, arg):
-        pass
-      
-    @abc.abstractmethod
-    def getname_h2dmalloc(self, arg):
-        pass
-
-    @abc.abstractmethod
-    def getname_d2hcopy(self, arg):
-        pass
-
-    @abc.abstractmethod
-    def get_numpyattrs(self, arg):
-        pass
 
     def h2dcopy(self, inargs, outargs):
 
@@ -353,7 +353,7 @@ def select_backends(backend, compile, order, workdir):
     if len(_installed_backends) == 0:
         from errand.cuda_hip import CudaBackend, HipBackend
         from errand.pthread import PThreadBackend
-        from errand.openacc import OpenAccCppBackend
+        from errand.openacc_cpp import OpenAccCppBackend
         from errand.cpp import CppBackend
 
         _installed_backends[CudaBackend.name] = CudaBackend
