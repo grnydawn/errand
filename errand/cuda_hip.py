@@ -5,7 +5,7 @@
 
 import os
 
-from errand.backend import Backend, varclass_template
+from errand.backend import CppBackendBase, varclass_template
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
@@ -126,7 +126,7 @@ calldevmain_template = """
     _kernel<<<TEAM_SIZE, MEMBER_SIZE>>>({args});
 """
 
-class CudaHipBackend(Backend):
+class CudaHipBackend(CppBackendBase):
 
     def __init__(self, workdir, compilers, targetsystem):
 

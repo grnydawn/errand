@@ -56,6 +56,9 @@ public:
 
 
 class Backend(abc.ABC):
+    pass
+
+class CppBackendBase(abc.ABC):
     """Errand Backend class
 
     * keep as transparent and passive as possible
@@ -251,7 +254,7 @@ extern "C" int run() {{
         cmd = "%s %s -o %s %s" % (compiler.path, compiler.get_option(), libpath,
                                   codepath)
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         out = shellcmd(cmd)
 
         if out.returncode  != 0:

@@ -6,7 +6,7 @@
 import os
 import numpy
 
-from errand.backend import Backend, varclass_template
+from errand.backend import CppBackendBase, varclass_template
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
@@ -115,7 +115,7 @@ calldevmain_template = """
 
 """
 
-class OpenAccCppBackend(Backend):
+class OpenAccCppBackend(CppBackendBase):
 
     name = "openacc-c++"
     codeext = "cpp"
