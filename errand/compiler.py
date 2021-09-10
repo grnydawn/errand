@@ -245,7 +245,7 @@ class Compilers(object):
 
         clist = []
 
-        if backend == "pthread":
+        if backend in ("pthread", "c++"):
             clist =  [Pthread_Gnu_Cpp_Compiler, Pthread_CrayClang_Cpp_Compiler,
                       Pthread_AmdClang_Cpp_Compiler, Pthread_Pgi_Cpp_Compiler]
 
@@ -258,7 +258,6 @@ class Compilers(object):
         elif backend == "openacc-c++":
             clist =  [OpenAcc_Gnu_Cpp_Compiler, OpenAcc_CrayClang_Cpp_Compiler,
                       OpenAcc_Pgi_Cpp_Compiler]
-
         else:
             raise Exception("Compiler for '%s' is not supported." % backend)
 

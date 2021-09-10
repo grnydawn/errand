@@ -6,8 +6,9 @@ from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
 #test_backends = ["cuda", "hip", "pthread"]
-test_backends = ["hip", "pthread", "openacc-c++"]
+#test_backends = ["hip", "pthread", "openacc-c++"]
 #test_backends = ["hip"]
+test_backends = ["c++"]
 #test_backends = ["cuda"]
 #test_backends = ["cuda", "pthread"]
 #test_backends = ["cuda", "pthread", "openacc-c++"]

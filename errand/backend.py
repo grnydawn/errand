@@ -251,7 +251,7 @@ extern "C" int run() {{
         cmd = "%s %s -o %s %s" % (compiler.path, compiler.get_option(), libpath,
                                   codepath)
 
-        #import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         out = shellcmd(cmd)
 
         if out.returncode  != 0:
@@ -351,11 +351,13 @@ def select_backends(backend, compile, order, workdir):
         from errand.cuda_hip import CudaBackend, HipBackend
         from errand.pthread import PThreadBackend
         from errand.openacc import OpenAccCppBackend
+        from errand.cpp import CppBackend
 
         _installed_backends[CudaBackend.name] = CudaBackend
         _installed_backends[HipBackend.name] = HipBackend
         _installed_backends[PThreadBackend.name] = PThreadBackend
         _installed_backends[OpenAccCppBackend.name] = OpenAccCppBackend
+        _installed_backends[CppBackend.name] = CppBackend
 
     candidate = None
 
