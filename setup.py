@@ -3,7 +3,7 @@
 def main():
 
     from setuptools import setup, find_packages
-    from errand.main import Errand as erd
+    from errand.context import Errand as erd
 
     install_requires = ["numpy"]
 
