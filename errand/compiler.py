@@ -50,6 +50,12 @@ class Cpp_Compiler(Compiler):
         super(Cpp_Compiler, self).__init__(path, flags)
 
 
+class Fortran_Compiler(Compiler):
+
+    def __init__(self, path, flags):
+        super(Fortran_Compiler, self).__init__(path, flags)
+
+
 class Gnu_Cpp_Compiler(Cpp_Compiler):
 
     def __init__(self, path, flags):
@@ -236,6 +242,21 @@ class Hip_Cpp_Compiler(Cpp_Compiler):
         return version.startswith("HIP version")
 
 
+class Cray_Fortran_Compiler(Fortran_Compiler):
+
+    def __init__(self, path, flags):
+
+        if path is None:
+            path = which("ftn")
+
+        super(Cray_Fortran_Compiler, self).__init__(path, flags)
+
+    def get_option(self):
+        return "-shared " + super(Cray_Fortran_Compiler, self).get_option()
+
+    def check_version(self, version):
+        return version.startswith("Cray Fortran")
+
 
 class Compilers(object):
 
@@ -258,6 +279,10 @@ class Compilers(object):
         elif backend == "openacc-c++":
             clist =  [OpenAcc_Gnu_Cpp_Compiler, OpenAcc_CrayClang_Cpp_Compiler,
                       OpenAcc_Pgi_Cpp_Compiler]
+
+        elif backend == "fortran":
+            clist =  [Cray_Fortran_Compiler]
+
         else:
             raise Exception("Compiler for '%s' is not supported." % backend)
 

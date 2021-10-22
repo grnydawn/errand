@@ -23,3 +23,9 @@
 		z(id) = x(id) + y(id);
 	}
 
+[fortran]
+    INTEGER i
+
+	DO i=1,x@shape(0)
+		z(id) = x(id) + y(id);
+    END DO
