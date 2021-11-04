@@ -51,7 +51,8 @@ class Workshop(object):
             try:
                 return self.start_backend(backend, nteams, nmembers, nassigns)
             except Exception as e:
-                print("backend '%s' is not workiing." % backend.name)
+                print("backend '%s' is not working." % backend.name)
+                print(e)
                 # try multiple kinds of multiple backends
                 pass
 

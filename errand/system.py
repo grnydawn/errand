@@ -5,6 +5,7 @@
 
 import abc
 
+# OS + H/W
 
 class System(abc.ABC):
     """Errand system class

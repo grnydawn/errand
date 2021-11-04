@@ -78,7 +78,15 @@ class Backend(abc.ABC):
 
     def get_compiler(self):
         
-        return self.compilers.select_one()
+        comp = self.compilers.select_one()
+
+        if hasattr(comp, "codeext"):
+            self.codeext = comp.codeext
+
+        if hasattr(comp, "libext"):
+            self.libext = comp.libext
+
+        return comp
 
     def getname_argpair(self, arg):
         return (arg["data"].ndim, self.getname_ctype(arg))
@@ -113,6 +121,9 @@ class CppBackendBase(Backend):
 
     * keep as transparent and passive as possible
 """
+
+    codeext = "cpp"
+
     code_template = """
 {top}
 
@@ -252,6 +263,10 @@ extern "C" int run() {{
             postrun=postrun, tail=tail, struct=struct, function=function,
             varglobal=varglobal)
 
+        compiler = self.get_compiler()
+        if compiler is None:
+            raise Exception("Compiler is not available.")
+
         fname = hashlib.md5(code.encode("utf-8")).hexdigest()[:10]
 
         codepath = os.path.join(self.workdir, fname + "." + self.codeext)
@@ -262,10 +277,6 @@ extern "C" int run() {{
         # TODO : retry compilation for debug and performance optimization
 
         libpath = os.path.join(self.workdir, fname + "." + self.libext)
-
-        compiler = self.get_compiler()
-        if compiler is None:
-            raise Exception("Compiler is not available.")
 
         cmd = "%s %s -o %s %s" % (compiler.path, compiler.get_option(), libpath,
                                   codepath)

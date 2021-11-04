@@ -135,7 +135,6 @@ calldevmain_template = """
 class PThreadBackend(CppBackendBase):
 
     name = "pthread"
-    codeext = "cpp"
     libext = "so"
 
     def __init__(self, workdir, compile):

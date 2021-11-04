@@ -50,6 +50,24 @@ class Cpp_Compiler(Compiler):
         super(Cpp_Compiler, self).__init__(path, flags)
 
 
+class AppleClang_Cpp_Compiler(Cpp_Compiler):
+
+    libext = "dylib"
+
+    def __init__(self, path, flags):
+
+        if path is None:
+            path = which("clang++")
+
+        super(AppleClang_Cpp_Compiler, self).__init__(path, flags)
+
+    def get_option(self):
+        return "-dynamiclib -fPIC " + super(AppleClang_Cpp_Compiler, self).get_option()
+
+    def check_version(self, version):
+        return version.startswith("Apple clang version")
+
+
 class Gnu_Cpp_Compiler(Cpp_Compiler):
 
     def __init__(self, path, flags):
@@ -155,6 +173,12 @@ class Pthread_Pgi_Cpp_Compiler(Pgi_Cpp_Compiler):
         return "-lpthread " + super(Pthread_Pgi_Cpp_Compiler, self).get_option()
 
 
+class Pthread_AppleClang_Cpp_Compiler(AppleClang_Cpp_Compiler):
+
+    def get_option(self):
+        return "-lpthread " + super(Pthread_AppleClang_Cpp_Compiler, self).get_option()
+
+
 class OpenAcc_Gnu_Cpp_Compiler(Pthread_Gnu_Cpp_Compiler):
 
     def __init__(self, path, flags):
@@ -247,7 +271,8 @@ class Compilers(object):
 
         if backend in ("pthread", "c++"):
             clist =  [Pthread_Gnu_Cpp_Compiler, Pthread_CrayClang_Cpp_Compiler,
-                      Pthread_AmdClang_Cpp_Compiler, Pthread_Pgi_Cpp_Compiler]
+                      Pthread_AmdClang_Cpp_Compiler, Pthread_Pgi_Cpp_Compiler,
+                      Pthread_AppleClang_Cpp_Compiler]
 
         elif backend == "cuda":
             clist =  [Cuda_Cpp_Compiler]
