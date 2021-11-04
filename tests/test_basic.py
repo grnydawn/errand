@@ -9,10 +9,11 @@ here = os.path.dirname(os.path.abspath(__file__))
 #test_backends = ["hip", "pthread", "openacc-c++", "c++"]
 #test_backends = ["hip"]
 #test_backends = ["c++"]
+test_backends = ["fortran"]
 #test_backends = ["cuda"]
 #test_backends = ["cuda", "pthread"]
 #test_backends = ["cuda", "pthread", "openacc-c++"]
-test_backends = ["pthread"]
+#test_backends = ["pthread"]
 #test_backends = ["openacc-c++"]
 
 @pytest.mark.parametrize("backend", test_backends)
@@ -62,7 +63,7 @@ def test_vecadd1d(backend):
     #assert reduced_c == a.sum() + b.sum()
 
 @pytest.mark.parametrize("backend", test_backends)
-def test_vecadd2d(backend):
+def ttest_vecadd2d(backend):
 
     #NROW, NCOL = 2000, 300
     NROW, NCOL = 20, 3
@@ -85,7 +86,7 @@ def test_vecadd2d(backend):
 
 
 @pytest.mark.parametrize("backend", test_backends)
-def test_vecadd3d(backend):
+def ttest_vecadd3d(backend):
 
     #NROW, NCOL = 2000, 300
     X, Y, Z = 10, 3, 2
@@ -107,7 +108,7 @@ def test_vecadd3d(backend):
     assert np.array_equal(c, a+b)
 
 @pytest.mark.parametrize("backend", test_backends)
-def test_listadd2d(backend):
+def ttest_listadd2d(backend):
 
     NROW = 2
     NCOL = 3

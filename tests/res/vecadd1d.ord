@@ -18,8 +18,13 @@
 	}
 
 [c++]
-	
+
 	for (int id = 0; id < x.shape(0); id++) {
 		z(id) = x(id) + y(id);
 	}
 
+[fortran]
+
+	DO id=1, x.shape(1)
+		z(id) = x(id) + y(id)
+	END DO

@@ -1,4 +1,4 @@
-"""Errand OpenAcc backend module
+"""Errand Fortran backend module
 
 
 """
@@ -6,119 +6,80 @@
 import os
 import numpy
 
-from errand.backend import CppBackendBase, cpp_varclass_template
+from errand.backend import FortranBackendBase, fortran_varclass_template
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
 
 
 struct_template = """
-typedef struct arguments {{
-    {args}
-}} ARGSTYPE;
-
-typedef struct wrap_args {{
-    ARGSTYPE * data;
-    int tid;
-    int state;
-}} WRAPARGSTYPE;
 """
 
 host_vardef_template = """
-{vartype} {varname} = {vartype}();
 """
 
 varglobal_template = """
-ARGSTYPE struct_args = {{
-{varassign}
-}};
 """
 
-h2dcopy_template = """
-extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
+pthrd_h2dcopy_template = """
+INTEGER FUNCTION {name} (data, attrs, attrsize)
+    {dtype}, DIMENSION(:), INTENT(IN) :: data
+    INTEGER, DIMENSION(:), INTENT(IN) :: attrs
+    INTEGER, INTENT(IN) :: attrsize
 
-    {hvar}.data = ({dtype} *) data;
-    {hvar}._attrs = (int *) malloc(attrsize * sizeof(int));
-    memcpy({hvar}._attrs, _attrs, attrsize * sizeof(int));
+    !PRINT *, data
+    !{hvar}@data = data
+    !ALLOCATE({hvar}@attrs(attrsize))
+    !{hvar}@attrs = attrs
 
-    return 0;
-}}
+    {name} = 0
+
+END FUNCTION
 """
 
-h2dmalloc_template = """
-extern "C" int {name}(void * data, void * _attrs, int attrsize) {{
+pthrd_h2dmalloc_template = """
+INTEGER FUNCTION {name} (data, attrs, attrsize)
+    {dtype}, DIMENSION(:), INTENT(IN) :: data
+    INTEGER, DIMENSION(:), INTENT(IN) :: attrs
+    INTEGER, INTENT(IN) :: attrsize
 
-    {hvar}.data = ({dtype} *) data;
-    {hvar}._attrs = (int *) malloc(attrsize * sizeof(int));
-    memcpy({hvar}._attrs, _attrs, attrsize * sizeof(int));
+    !PRINT *, data
+    !{hvar}@data = data
+    !ALLOCATE({hvar}@attrs(attrsize))
+    !{hvar}@attrs = attrs
 
-    return 0;
-}}
+    {name} = 0
+
+END FUNCTION
+
 """
 
-d2hcopy_template = """
-extern "C" int {name}(void * data) {{
+pthrd_d2hcopy_template = """
+INTEGER FUNCTION {name} (data)
+    {dtype}, DIMENSION(:), INTENT(IN) :: data
 
-    return 0;
-}}
+    !PRINT *, data
+    !{hvar}@data = data
+
+    {name} = 0
+
+END FUNCTION
+
 """
 
 devfunc_template = """
-void * _kernel(void * ptr){{
-    {argdef}
+"""
 
-    WRAPARGSTYPE * args = (WRAPARGSTYPE *)ptr;
-
-    args->state = 1;
-
-    {argassign}
-
-#pragma acc enter data create({creates})
-#pragma acc update device({dev_updates})
-
-#pragma acc parallel num_gangs({ngangs}) num_workers({nworkers}) \
-vector_length({veclen})
-{{
-    {body}
-}}
-
-#pragma acc update self ({host_updates})
-#pragma acc exit data delete({deletes})
-
-    args->state = 2;
-
-    isfinished = 1;
-
-    return NULL;
-}}
+function_template = """
 """
 
 calldevmain_template = """
-
-    pthread_t thread;
-    WRAPARGSTYPE args;
-
-    pthread_attr_t attr;
-
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
-    args.tid = 0;
-    args.state = 0;
-    args.data = &struct_args;
-
-    pthread_create(&thread, &attr, _kernel, &args);
-
-    while (args.state == 0) {{
-        do {{ }} while(0);
-    }}
-
 """
 
-class OpenAccCppBackend(CppBackendBase):
+class FortranBackend(FortranBackendBase):
 
-    name = "openacc-c++"
-    codeext = "cpp"
+    name = "fortran"
+    codeext = "f90"
     libext = "so"
 
     def __init__(self, workdir, compile):
@@ -126,7 +87,7 @@ class OpenAccCppBackend(CppBackendBase):
         compilers = Compilers(self.name, compile)
         targetsystem = select_system("cpu")
 
-        super(OpenAccCppBackend, self).__init__(workdir, compilers,
+        super(FortranBackend, self).__init__(workdir, compilers,
             targetsystem)
 
     #def compiler_option(self):
@@ -197,7 +158,7 @@ class OpenAccCppBackend(CppBackendBase):
                 attrsize = self.len_numpyattrs(arg)
 
                 hvartype = self.getname_vartype(arg, "host")
-                dvsd[ndim] = cpp_varclass_template.format(vartype=hvartype, oparg=oparg,
+                dvsd[ndim] = fortran_varclass_template.format(vartype=hvartype, oparg=oparg,
                         offset=offset, funcprefix="", dtype=dname,
                         attrsize=attrsize)
 
@@ -244,14 +205,15 @@ class OpenAccCppBackend(CppBackendBase):
 
         return out
 
+    def code_function(self):
+
+        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+        return function_template.format(nthreads=str(nthreads))
+
     def code_devfunc(self):
 
         argdef = []
         argassign = []
-        creates = []
-        deletes = []
-        host_updates = []
-        dev_updates = []
 
         body = str(self.order.get_section(self.name))
 
@@ -259,45 +221,14 @@ class OpenAccCppBackend(CppBackendBase):
 
             ndim, dname = self.getname_argpair(arg)
 
-            #argdef.append("host_%s_dim%s %s = host_%s_dim%s();" %
-            #        (dname, ndim, arg["curname"], dname, ndim))
-            argdef.append("host_%s_dim%s %s;" %
-                    (dname, ndim, arg["curname"]))
-            argassign.append("%s = *(args->data->host_%s);" %
-                    (arg["curname"], arg["curname"]))
-            accstr = ("{name}.data[0:{name}._attrs[2]], "
-                "{name}._attrs[0:{name}._attrs[2]]").format(name=arg["curname"])
-            creates.append(accstr)
-            deletes.append("{name}.data, {name}._attrs".format(name=arg["curname"]))
+            #argdef.append("host_%s_dim%s %s = host_%s_dim%s();" % (dname, ndim, arg["curname"], dname, ndim))
+            argdef.append("host_%s_dim%s %s;" % (dname, ndim, arg["curname"]))
+            argassign.append("%s = *(args->data->host_%s);" % (arg["curname"], arg["curname"]))
 
-        for arg in self.inargs:
-
-            ndim, dname = self.getname_argpair(arg)
-
-            accstr = ("{name}.data[0:{name}._attrs[2]], "
-                "{name}._attrs[0:{name}._attrs[2]]").format(name=arg["curname"])
-
-            dev_updates.append(accstr)
-
-        for arg in self.outargs:
-
-            ndim, dname = self.getname_argpair(arg)
-
-            host_updates.append("{name}.data[0:{name}._attrs[2]]".
-                format(name=arg["curname"]))
-
-        gangs = numpy.prod(self.nteams)
-        workers = numpy.prod(self.nmembers)
-        veclen = numpy.prod(self.nassigns)
+        argassign.append("int ERRAND_GOFER_ID = 0;")
 
         return devfunc_template.format(argdef="\n".join(argdef), body=body,
-                    argassign="\n".join(argassign),
-                    creates=", \\\n".join(creates),
-                    dev_updates=", \\\n".join(dev_updates),
-                    host_updates=", \\\n".join(host_updates),
-                    deletes=", \\\n".join(deletes),
-                    ngangs=str(gangs), nworkers=str(workers),
-                    veclen=str(veclen))
+                    argassign="\n".join(argassign))
 
     def code_h2dcopyfunc(self):
 
@@ -350,15 +281,16 @@ class OpenAccCppBackend(CppBackendBase):
         # testing
         #args.append("1")
 
-        return calldevmain_template.format()
+        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+        return calldevmain_template.format(nthreads=str(nthreads))
 
     def get_template(self, name):
 
         if name == "h2dcopy":
-            return h2dcopy_template
+            return pthrd_h2dcopy_template
 
         elif name == "h2dmalloc":
-            return h2dmalloc_template
+            return pthrd_h2dmalloc_template
 
         elif name == "d2hcopy":
-            return d2hcopy_template
+            return pthrd_d2hcopy_template

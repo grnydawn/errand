@@ -12,7 +12,8 @@ from errand.util import shellcmd, split_compile
 
 _installed_backends = {}
 
-varclass_template = """
+
+cpp_varclass_template = """
 class {vartype} {{
 public:
     {dtype} * data;
@@ -52,6 +53,9 @@ public:
         return q;
     }}
 }};
+"""
+
+fortran_varclass_template = """
 """
 
 
@@ -115,6 +119,14 @@ class Backend(abc.ABC):
     def get_numpyattrs(self, arg):
         pass
 
+    @abc.abstractmethod
+    def run(self):
+        pass
+
+    @abc.abstractmethod
+    def isalive(self):
+        pass
+
 
 class CppBackendBase(Backend):
     """Errand Backend class
@@ -124,7 +136,7 @@ class CppBackendBase(Backend):
 
     codeext = "cpp"
 
-    code_template = """
+    cpp_code_template = """
 {top}
 
 {header}
@@ -256,7 +268,7 @@ extern "C" int run() {{
         postrun = self.code_postrun()
         tail = self.code_tail()
 
-        code = self.code_template.format(top=top, header=header,
+        code = self.cpp_code_template.format(top=top, header=header,
             namespace=namespace, varclass=varclass, vardef=vardef,
             h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
             devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
@@ -358,6 +370,304 @@ extern "C" int run() {{
             if type(arg["data"]) != type(arg["orgdata"]):
                 self._copy2orgdata(arg)
 
+    def run(self):
+        if self.sharedlib:
+            return getattr(self.sharedlib, "run")()
+
+        else:
+            return -1
+
+    def isalive(self):
+        if self.sharedlib:
+            return getattr(self.sharedlib, "isalive")()
+
+        else:
+            return -1
+
+
+class FortranBackendBase(Backend):
+    """Errand Fortran BackendBase class
+
+    * keep as transparent and passive as possible
+"""
+
+    codeext = "f90"
+    objext = "o"
+
+
+    fortran_module_template = """
+
+MODULE global
+
+{varclass}
+
+{struct}
+
+INTEGER :: isfinished = 0
+
+{vardef}
+
+{varglobal}
+
+END MODULE
+"""
+
+    fortran_code_template = """
+{top}
+
+INTEGER FUNCTION isalive()
+    USE global, only : isfinished
+    IMPLICIT NONE
+
+    isalive = isfinished
+END FUNCTION
+
+{function}
+
+{h2dcopyfunc}
+
+{d2hcopyfunc}
+
+{devfunc}
+
+INTEGER FUNCTION run()
+    IMPLICIT NONE
+
+    {prerun}
+
+    {calldevmain} 
+
+    {postrun}
+
+    run = 0
+
+END FUNCTION
+
+{tail}
+"""
+
+    dtypemap = {
+        "int32": ["INTEGER", c_int],
+        "int64": ["INTEGER*8", c_longlong],
+        "float32": ["REAL", c_float],
+        "float64": ["DOUBLE PRECISION", c_double]
+    }
+
+    def code_top(self):
+        return ""
+
+    def code_header(self):
+        return ""
+
+    def code_namespace(self):
+        return ""
+
+    def code_varclass(self):
+        return ""
+
+    def code_struct(self):
+        return ""
+
+    def code_vardef(self):
+        return ""
+
+    def code_varglobal(self):
+        return ""
+
+    def code_h2dcopyfunc(self):
+        return ""
+
+    def code_d2hcopyfunc(self):
+        return ""
+
+    @abc.abstractmethod
+    def code_devfunc(self):
+        pass
+
+    def code_function(self):
+        return ""
+
+    def code_prerun(self):
+        return ""
+
+    @abc.abstractmethod
+    def code_calldevmain(self):
+        pass
+
+    def code_postrun(self):
+        return ""
+
+    def code_tail(self):
+        return ""
+ 
+    def gencode(self, nteams, nmembers, nassigns, inargs, outargs, order):
+
+        innames, outnames = order.get_argnames()
+
+        if innames or outnames:
+            assert len(innames) == len(inargs), "The number of input arguments mismatches."
+            assert len(outnames) == len(outargs), "The number of input arguments mismatches."
+
+            for arg, name in zip(inargs+outargs, innames+outnames):
+                arg["curname"] = name
+
+        self.nteams = nteams
+        self.nmembers = nmembers
+        self.nassigns = nassigns
+        self.inargs = inargs
+        self.outargs = outargs
+        self.order = order
+
+        compiler = self.get_compiler()
+        if compiler is None:
+            raise Exception("Compiler is not available.")
+
+        # generate source code
+        top = self.code_top()
+        header = self.code_header()
+        namespace = self.code_namespace()
+        varclass = self.code_varclass()
+        struct = self.code_struct()
+        vardef = self.code_vardef()
+        varglobal = self.code_varglobal()
+        h2dcopyfunc = self.code_h2dcopyfunc()
+        d2hcopyfunc = self.code_d2hcopyfunc()
+        devfunc = self.code_devfunc()
+        function = self.code_function()
+        prerun = self.code_prerun()
+        calldevmain = self.code_calldevmain()
+        postrun = self.code_postrun()
+        tail = self.code_tail()
+
+        # compile module
+        mod_code = self.fortran_module_template.format(varclass=varclass,
+                    struct=struct, vardef=vardef, varglobal=varglobal)
+
+        fname_mod = hashlib.md5(mod_code.encode("utf-8")).hexdigest()[:10]
+
+        modpath = os.path.join(self.workdir, fname_mod + "." + self.codeext)
+        with open(modpath, "w") as f:
+            f.write(mod_code)
+
+        modoutpath = os.path.join(self.workdir, fname_mod + "." + self.objext)
+
+        cmd_mod = "%s %s -o %s %s" % (compiler.path, compiler.get_option(linker=False,
+                    moddir=self.workdir), modoutpath, modpath)
+
+        #import pdb; pdb.set_trace()
+        out_mod = shellcmd(cmd_mod)
+
+        if out_mod.returncode  != 0:
+            print(out_mod.stderr.decode())
+            sys.exit(out_mod.returncode)
+
+        # compile main
+        main_code = self.fortran_code_template.format(top=top, header=header,
+            namespace=namespace,
+            h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
+            devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
+            postrun=postrun, tail=tail, function=function)
+
+        fname_main = hashlib.md5(main_code.encode("utf-8")).hexdigest()[:10]
+
+        codepath = os.path.join(self.workdir, fname_main + "." + self.codeext)
+        with open(codepath, "w") as f:
+            f.write(main_code)
+
+        # generate shared library
+        # TODO : retry compilation for debug and performance optimization
+
+        libpath = os.path.join(self.workdir, fname_main + "." + self.libext)
+
+        cmd = "%s %s -o %s %s %s" % (compiler.path, compiler.get_option(), libpath,
+                                  codepath, modoutpath)
+
+        #import pdb; pdb.set_trace()
+        out = shellcmd(cmd)
+
+        if out.returncode  != 0:
+            print(out.stderr.decode())
+            sys.exit(out.returncode)
+
+        # load the library
+        head, tail = os.path.split(libpath)
+        base, ext = os.path.splitext(tail)
+
+        self.sharedlib = load_library(base, head)
+
+        # create a thread if required
+
+        #return the library 
+        return self.sharedlib
+
+    def h2dcopy(self, inargs, outargs):
+
+        # shape, dtype, strides, itemsize, ndims, flags, size, nbytes flat, ctypes, reshape
+
+        for arg in inargs:
+
+            attrs = self.get_numpyattrs(arg)
+            cattrs = c_int*len(attrs)
+
+            h2dcopy = getattr(self.sharedlib, self.getname_h2dcopy(arg)+"_")
+            h2dcopy.restype = c_int
+            h2dcopy.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int] 
+            res = h2dcopy(arg["data"], cattrs(*attrs), len(attrs))
+
+        for arg in outargs:
+
+            attrs = self.get_numpyattrs(arg)
+            cattrs = c_int*len(attrs)
+
+            h2dmalloc = getattr(self.sharedlib, self.getname_h2dmalloc(arg)+"_")
+            h2dmalloc.restype = c_int
+            h2dmalloc.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int]
+            res = h2dmalloc(arg["data"], cattrs(*attrs), len(attrs))
+
+    def _copy2orgdata(self, arg):
+
+        def _copyto(dst, src):
+
+            if src.ndim == 1:
+                for i, e in enumerate(src):
+                    dst[i] = e
+            else:
+                for i in range(src.shape[0]):
+                    _copyto(dst[i], src[i])
+
+        if arg["data"].ndim == 0:
+            raise Exception("Zero-dimension copy is not allowed.")
+
+        else:
+            _copyto(arg["orgdata"], arg["data"])
+
+    def d2hcopy(self, outargs):
+
+        for arg in outargs:
+
+            d2hcopy = getattr(self.sharedlib, self.getname_d2hcopy(arg)+"_")
+            d2hcopy.restype = c_int
+            d2hcopy.argtypes = [ndpointer(self.get_ctype(arg))]
+
+            res = d2hcopy(arg["data"])
+
+            if type(arg["data"]) != type(arg["orgdata"]):
+                self._copy2orgdata(arg)
+
+    def run(self):
+        if self.sharedlib:
+            return getattr(self.sharedlib, "run_")()
+
+        else:
+            return -1
+
+    def isalive(self):
+        if self.sharedlib:
+            return getattr(self.sharedlib, "isalive_")()
+
+        else:
+            return -1
+
 
 def select_backends(backend, compile, order, workdir):
 
@@ -366,12 +676,14 @@ def select_backends(backend, compile, order, workdir):
         from errand.pthread import PThreadBackend
         from errand.openacc_cpp import OpenAccCppBackend
         from errand.cpp import CppBackend
+        from errand.fortran import FortranBackend
 
         _installed_backends[CudaBackend.name] = CudaBackend
         _installed_backends[HipBackend.name] = HipBackend
         _installed_backends[PThreadBackend.name] = PThreadBackend
         _installed_backends[OpenAccCppBackend.name] = OpenAccCppBackend
         _installed_backends[CppBackend.name] = CppBackend
+        _installed_backends[FortranBackend.name] = FortranBackend
 
     candidate = None
 
