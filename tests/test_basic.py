@@ -21,8 +21,8 @@ def test_vecadd1d(backend):
 
     N = 100
 
-    a = np.ones(N)
-    b = np.ones(N) * 2
+    a = np.arange(N)
+    b = np.arange(N) * 2
     c = np.zeros(N)
 
     order = os.path.join(here, "res", "vecadd1d.ord")
@@ -63,13 +63,16 @@ def test_vecadd1d(backend):
     #assert reduced_c == a.sum() + b.sum()
 
 @pytest.mark.parametrize("backend", test_backends)
-def ttest_vecadd2d(backend):
+def test_vecadd2d(backend):
 
     #NROW, NCOL = 2000, 300
-    NROW, NCOL = 20, 3
+    #NROW, NCOL = 20, 3
+    NROW, NCOL = 4, 3
 
-    a = np.ones((NROW, NCOL))
-    b = np.ones((NROW, NCOL))
+    #a = np.ones((NROW, NCOL))
+    #b = np.ones((NROW, NCOL))
+    a = np.arange(NROW*NCOL).reshape(NROW, NCOL)
+    b = np.arange(NROW*NCOL).reshape(NROW, NCOL)
     c = np.zeros((NROW, NCOL))
 
     order = os.path.join(here, "res", "vecadd2d.ord")
@@ -86,13 +89,15 @@ def ttest_vecadd2d(backend):
 
 
 @pytest.mark.parametrize("backend", test_backends)
-def ttest_vecadd3d(backend):
+def test_vecadd3d(backend):
 
     #NROW, NCOL = 2000, 300
     X, Y, Z = 10, 3, 2
 
-    a = np.ones((X, Y, Z))
-    b = np.ones((X, Y, Z))
+    #a = np.ones((X, Y, Z))
+    #b = np.ones((X, Y, Z))
+    a = np.arange(X*Y*Z).reshape(X, Y, Z)
+    b = np.arange(X*Y*Z).reshape(X, Y, Z)
     c = np.zeros((X, Y, Z))
 
     order = os.path.join(here, "res", "vecadd3d.ord")
@@ -108,7 +113,7 @@ def ttest_vecadd3d(backend):
     assert np.array_equal(c, a+b)
 
 @pytest.mark.parametrize("backend", test_backends)
-def ttest_listadd2d(backend):
+def test_listadd2d(backend):
 
     NROW = 2
     NCOL = 3

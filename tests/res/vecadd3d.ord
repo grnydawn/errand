@@ -49,3 +49,15 @@ control = True
 			}
 		}
 	}
+
+[fortran]
+
+    INTEGER X, Y, Z
+
+    DO X=1, a_%shape(1)
+        DO Y=1, a_%shape(2)
+            DO Z=1, a_%shape(3)
+				c(X, Y, Z) = a(X, Y, Z) + b(X, Y, Z);
+            END DO
+        END DO
+    END DO

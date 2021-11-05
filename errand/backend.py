@@ -3,6 +3,8 @@
 
 """
 
+# TODO: add finish for memory deallocation on host and/or device
+
 import os, sys, abc, hashlib
 import numpy as np
 from numpy.ctypeslib import ndpointer, load_library
@@ -384,6 +386,7 @@ extern "C" int run() {{
 
         for arg in inargs:
 
+            arg["data"] = np.asfortranarray(arg["data"])
             attrs = self.get_numpyattrs(arg)
             cattrs = c_int*len(attrs)
 
@@ -684,6 +687,9 @@ END FUNCTION
         # shape, dtype, strides, itemsize, ndims, flags, size, nbytes flat, ctypes, reshape
 
         for arg in inargs:
+
+            # TODO: support fortran array layout
+            #arg["data"] = np.asfortranarray(arg["data"])
 
             attrs = self.get_numpyattrs(arg)
             cattrs = c_int*len(attrs)

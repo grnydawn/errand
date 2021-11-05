@@ -22,16 +22,21 @@ INTEGER (C_INT) FUNCTION {name} (data, attrs, attrsize_) BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING 
     USE global, ONLY : {varname}, {attrname}
     IMPLICIT NONE 
-    {dtype}, DIMENSION(*), INTENT(IN), TARGET :: data
+    {dtype}, DIMENSION({bound}), INTENT(IN), TARGET :: data
     INTEGER (C_INT), DIMENSION(*), INTENT(IN) :: attrs
     INTEGER (C_INT), INTENT(IN) :: attrsize_
+    INTEGER i, j
 
-    {varname} => data({bound})
+    {varname} => data
     ALLOCATE({attrname})
     ALLOCATE({attrname}%attrs(LOC(attrsize_)))
     {attrname}%attrs(:) = attrs(1:LOC(attrsize_))
 
-    !print *, {attrname}%size()
+!    DO i=1,{attrname}%shape(1)
+!        DO j=1,{attrname}%shape(2)
+!            print *, {varname}(i, j)
+!        END DO
+!    END DO
 
     {name} = 0
 
@@ -43,11 +48,12 @@ INTEGER (C_INT) FUNCTION {name} (data, attrs, attrsize_) BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING 
     USE global, ONLY : {varname}, {attrname}
     IMPLICIT NONE 
-    {dtype}, DIMENSION(*), INTENT(IN), TARGET :: data
+    {dtype}, DIMENSION({bound}), INTENT(IN), TARGET :: data
     INTEGER (C_INT), DIMENSION(*), INTENT(IN) :: attrs
     INTEGER (C_INT), INTENT(IN) :: attrsize_
+    INTEGER i, j
 
-    {varname} => data({bound})
+    {varname} => data
     ALLOCATE({attrname})
     ALLOCATE({attrname}%attrs(LOC(attrsize_)))
     {attrname}%attrs(:) = attrs(1:LOC(attrsize_))
@@ -63,8 +69,11 @@ END FUNCTION
 pthrd_d2hcopy_template = """
 INTEGER (C_INT) FUNCTION {name} (data) BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING 
+    USE global, ONLY : {varname}, {attrname}
     IMPLICIT NONE 
-    {dtype}, DIMENSION(*), INTENT(OUT) :: data
+    {dtype}, DIMENSION({bound}), INTENT(OUT) :: data
+
+    data = {varname}
 
     {name} = 0
 
@@ -245,11 +254,12 @@ class FortranBackend(FortranBackendBase):
             template = self.get_template("h2dcopy")
 
             bound = []
-            for idx, shape in enumerate(arg["data"].shape):
-                bound.append("1:attrs(%d)" % (idx+4))
+            for s in arg["data"].shape:
+                bound.append("%d" % s)
 
             out += template.format(name=fname, dtype=dname,
-                    varname=arg["curname"], attrname=arg["curname"]+"_", bound=",".join(bound))
+                    varname=arg["curname"], attrname=arg["curname"]+"_",
+                    bound=",".join(bound))
 
         for arg in self.outargs:
 
@@ -259,11 +269,12 @@ class FortranBackend(FortranBackendBase):
             template = self.get_template("h2dmalloc")
 
             bound = []
-            for idx, shape in enumerate(arg["data"].shape):
-                bound.append("1:attrs(%d)" % (idx+4))
+            for s in arg["data"].shape:
+                bound.append("%d" % s)
 
             out += template.format(name=fname, dtype=dname,
-                    varname=arg["curname"], attrname=arg["curname"]+"_", bound=",".join(bound))
+                    varname=arg["curname"], attrname=arg["curname"]+"_",
+                    bound=",".join(bound))
 
         return out
 
@@ -278,7 +289,13 @@ class FortranBackend(FortranBackendBase):
 
             template = self.get_template("d2hcopy")
 
-            out += template.format(name=fname, dtype=dname)
+            bound = []
+            for s in arg["data"].shape:
+                bound.append("%d" % s)
+
+            out += template.format(name=fname, dtype=dname,
+                    varname=arg["curname"], attrname=arg["curname"]+"_",
+                    bound=",".join(bound))
 
         return out
 

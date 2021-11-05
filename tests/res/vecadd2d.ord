@@ -45,3 +45,14 @@ control = True
 			c(row, col) = a(row, col) + b(row, col);
 		}
 	}
+
+[fortran]
+
+    INTEGER row, col
+
+    DO row=1, a_%shape(1)
+        DO col=1, a_%shape(2)
+			c(row, col) = a(row, col) + b(row, col);
+			!c(col, row) = a(col, row) + b(col, row);
+        END DO
+    END DO
