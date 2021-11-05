@@ -22,12 +22,23 @@ varglobal_template = """
 """
 
 pthrd_h2dcopy_template = """
-INTEGER FUNCTION {name} (data, attrs, attrsize)
-    {dtype}, DIMENSION(:), INTENT(IN) :: data
-    INTEGER, DIMENSION(:), INTENT(IN) :: attrs
-    INTEGER, INTENT(IN) :: attrsize
+INTEGER (C_INT) FUNCTION {name} (data, attrs, attrsize_) BIND(C)
+    USE, INTRINSIC :: ISO_C_BINDING 
+    IMPLICIT NONE 
+    {dtype}, DIMENSION(*), INTENT(IN) :: data
+    INTEGER (C_INT), DIMENSION(*), INTENT(IN) :: attrs
+    INTEGER (C_INT), INTENT(IN) :: attrsize_
+    INTEGER :: attrsize, i, j
 
-    !PRINT *, data
+    attrsize = LOC(attrsize_)
+    PRINT *, attrsize
+    DO i=1, attrsize
+        print *, attrs(i)
+    END DO
+    DO j=1, attrs(3)
+        print *, data(j)
+    END DO
+
     !{hvar}@data = data
     !ALLOCATE({hvar}@attrs(attrsize))
     !{hvar}@attrs = attrs
@@ -38,10 +49,12 @@ END FUNCTION
 """
 
 pthrd_h2dmalloc_template = """
-INTEGER FUNCTION {name} (data, attrs, attrsize)
-    {dtype}, DIMENSION(:), INTENT(IN) :: data
-    INTEGER, DIMENSION(:), INTENT(IN) :: attrs
-    INTEGER, INTENT(IN) :: attrsize
+INTEGER (C_INT) FUNCTION {name} (data, attrs, attrsize_) BIND(C)
+    USE, INTRINSIC :: ISO_C_BINDING 
+    IMPLICIT NONE 
+    {dtype}, DIMENSION(*), INTENT(IN) :: data
+    INTEGER (C_INT), DIMENSION(*), INTENT(IN) :: attrs
+    INTEGER (C_INT), INTENT(IN) :: attrsize_
 
     !PRINT *, data
     !{hvar}@data = data
@@ -55,8 +68,10 @@ END FUNCTION
 """
 
 pthrd_d2hcopy_template = """
-INTEGER FUNCTION {name} (data)
-    {dtype}, DIMENSION(:), INTENT(IN) :: data
+INTEGER (C_INT) FUNCTION {name} (data) BIND(C)
+    USE, INTRINSIC :: ISO_C_BINDING 
+    IMPLICIT NONE 
+    {dtype}, DIMENSION(*), INTENT(OUT) :: data
 
     !PRINT *, data
     !{hvar}@data = data

@@ -447,10 +447,10 @@ END FUNCTION
 """
 
     dtypemap = {
-        "int32": ["INTEGER", c_int],
-        "int64": ["INTEGER*8", c_longlong],
-        "float32": ["REAL", c_float],
-        "float64": ["DOUBLE PRECISION", c_double]
+        "int32": ["INTEGER (C_INT)", c_int],
+        "int64": ["INTEGER (C_LONG)", c_longlong],
+        "float32": ["REAL (C_FLOAT)", c_float],
+        "float64": ["REAL (C_DOUBLE)", c_double]
     }
 
     def code_top(self):
@@ -609,9 +609,13 @@ END FUNCTION
             attrs = self.get_numpyattrs(arg)
             cattrs = c_int*len(attrs)
 
-            h2dcopy = getattr(self.sharedlib, self.getname_h2dcopy(arg)+"_")
+            h2dcopy = getattr(self.sharedlib, self.getname_h2dcopy(arg))
             h2dcopy.restype = c_int
+            #h2dcopy.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int] 
+            #res = h2dcopy(arg["data"], cattrs(*attrs), len(attrs))
+
             h2dcopy.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int] 
+            import pdb; pdb.set_trace()
             res = h2dcopy(arg["data"], cattrs(*attrs), len(attrs))
 
         for arg in outargs:
@@ -619,7 +623,8 @@ END FUNCTION
             attrs = self.get_numpyattrs(arg)
             cattrs = c_int*len(attrs)
 
-            h2dmalloc = getattr(self.sharedlib, self.getname_h2dmalloc(arg)+"_")
+            #h2dmalloc = getattr(self.sharedlib, self.getname_h2dmalloc(arg)+"_")
+            h2dmalloc = getattr(self.sharedlib, self.getname_h2dmalloc(arg))
             h2dmalloc.restype = c_int
             h2dmalloc.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int]
             res = h2dmalloc(arg["data"], cattrs(*attrs), len(attrs))
@@ -645,7 +650,8 @@ END FUNCTION
 
         for arg in outargs:
 
-            d2hcopy = getattr(self.sharedlib, self.getname_d2hcopy(arg)+"_")
+            #d2hcopy = getattr(self.sharedlib, self.getname_d2hcopy(arg)+"_")
+            d2hcopy = getattr(self.sharedlib, self.getname_d2hcopy(arg))
             d2hcopy.restype = c_int
             d2hcopy.argtypes = [ndpointer(self.get_ctype(arg))]
 
