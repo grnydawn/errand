@@ -55,10 +55,72 @@ public:
 }};
 """
 
-fortran_varclass_template = """
+fortran_attrtype_template = """
+TYPE :: attrtype
+INTEGER (C_INT), DIMENSION(:), ALLOCATABLE :: attrs
+
+CONTAINS
+
+PROCEDURE :: ndim
+PROCEDURE :: itemsize
+PROCEDURE :: size
+PROCEDURE :: shape
+PROCEDURE :: stride
+PROCEDURE :: unravel_index
+END TYPE
 """
 
+fortran_attrproc_template = """
+INTEGER (C_INT) FUNCTION ndim(self)
+    CLASS(attrtype), INTENT(IN) :: self
 
+    ndim = self%attrs(1)
+END FUNCTION
+
+INTEGER (C_INT) FUNCTION itemsize(self)
+    CLASS(attrtype), INTENT(IN) :: self
+
+    itemsize = self%attrs(2)
+END FUNCTION
+
+INTEGER (C_INT) FUNCTION size(self)
+    CLASS(attrtype), INTENT(IN) :: self
+
+    size = self%attrs(3)
+END FUNCTION
+
+INTEGER (C_INT) FUNCTION shape(self, dim)
+    CLASS(attrtype), INTENT(IN) :: self
+    INTEGER, INTENT(IN) :: dim
+
+    shape = self%attrs(3+dim)
+END FUNCTION
+
+INTEGER (C_INT) FUNCTION stride(self, dim)
+    CLASS(attrtype), INTENT(IN) :: self
+    INTEGER, INTENT(IN) :: dim
+
+    stride = self%attrs(3+self%attrs(1)+dim)
+END FUNCTION
+
+INTEGER (C_INT) FUNCTION unravel_index(self, tid, dim)
+    CLASS(attrtype), INTENT(IN) :: self
+    INTEGER, INTENT(IN) :: dim, tid
+    INTEGER :: i
+    INTEGER (C_INT) :: q, r, s
+
+    r = tid
+
+    DO i=1,dim
+        s = self%stride(i)
+        q = r / s
+        r = MOD(r, s)
+    END DO
+
+    unravel_index = q
+END FUNCTION
+
+"""
 class Backend(abc.ABC):
 
     def __init__(self, workdir, compilers, targetsystem):
@@ -398,24 +460,30 @@ class FortranBackendBase(Backend):
     fortran_module_template = """
 
 MODULE global
+    USE, INTRINSIC :: ISO_C_BINDING
+    IMPLICIT NONE
 
-{varclass}
+{attrtype}
 
 {struct}
 
-INTEGER :: isfinished = 0
+INTEGER (C_INT):: isfinished = 0
 
 {vardef}
 
-{varglobal}
+{attrdef}
 
+CONTAINS
+
+{attrproc}
 END MODULE
 """
 
     fortran_code_template = """
 {top}
 
-INTEGER FUNCTION isalive()
+INTEGER (C_INT) FUNCTION isalive() BIND(C)
+    USE, INTRINSIC :: ISO_C_BINDING
     USE global, only : isfinished
     IMPLICIT NONE
 
@@ -430,7 +498,9 @@ END FUNCTION
 
 {devfunc}
 
-INTEGER FUNCTION run()
+INTEGER (C_INT) FUNCTION run() BIND(C)
+    USE, INTRINSIC :: ISO_C_BINDING
+    USE global, ONLY : {varattr}
     IMPLICIT NONE
 
     {prerun}
@@ -462,7 +532,13 @@ END FUNCTION
     def code_namespace(self):
         return ""
 
-    def code_varclass(self):
+    def code_attrtype(self):
+        return ""
+
+    def code_attrproc(self):
+        return ""
+
+    def code_varattr(self):
         return ""
 
     def code_struct(self):
@@ -471,7 +547,7 @@ END FUNCTION
     def code_vardef(self):
         return ""
 
-    def code_varglobal(self):
+    def code_attrdef(self):
         return ""
 
     def code_h2dcopyfunc(self):
@@ -526,10 +602,12 @@ END FUNCTION
         top = self.code_top()
         header = self.code_header()
         namespace = self.code_namespace()
-        varclass = self.code_varclass()
+        attrtype = self.code_attrtype()
+        attrproc = self.code_attrproc()
+        varattr = self.code_varattr()
         struct = self.code_struct()
         vardef = self.code_vardef()
-        varglobal = self.code_varglobal()
+        attrdef = self.code_attrdef()
         h2dcopyfunc = self.code_h2dcopyfunc()
         d2hcopyfunc = self.code_d2hcopyfunc()
         devfunc = self.code_devfunc()
@@ -540,8 +618,9 @@ END FUNCTION
         tail = self.code_tail()
 
         # compile module
-        mod_code = self.fortran_module_template.format(varclass=varclass,
-                    struct=struct, vardef=vardef, varglobal=varglobal)
+        mod_code = self.fortran_module_template.format(attrtype=attrtype,
+                    struct=struct, vardef=vardef, attrdef=attrdef,
+                    attrproc=attrproc)
 
         fname_mod = hashlib.md5(mod_code.encode("utf-8")).hexdigest()[:10]
 
@@ -563,7 +642,7 @@ END FUNCTION
 
         # compile main
         main_code = self.fortran_code_template.format(top=top, header=header,
-            namespace=namespace,
+            namespace=namespace, varattr=varattr,
             h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
             devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
             postrun=postrun, tail=tail, function=function)
@@ -615,7 +694,6 @@ END FUNCTION
             #res = h2dcopy(arg["data"], cattrs(*attrs), len(attrs))
 
             h2dcopy.argtypes = [ndpointer(self.get_ctype(arg)), cattrs, c_int] 
-            import pdb; pdb.set_trace()
             res = h2dcopy(arg["data"], cattrs(*attrs), len(attrs))
 
         for arg in outargs:
@@ -662,14 +740,14 @@ END FUNCTION
 
     def run(self):
         if self.sharedlib:
-            return getattr(self.sharedlib, "run_")()
+            return getattr(self.sharedlib, "run")()
 
         else:
             return -1
 
     def isalive(self):
         if self.sharedlib:
-            return getattr(self.sharedlib, "isalive_")()
+            return getattr(self.sharedlib, "isalive")()
 
         else:
             return -1

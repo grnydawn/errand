@@ -6,7 +6,8 @@
 import os
 import numpy
 
-from errand.backend import FortranBackendBase, fortran_varclass_template
+from errand.backend import (FortranBackendBase, fortran_attrtype_template,
+                            fortran_attrproc_template)
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
@@ -15,33 +16,22 @@ from errand.util import which
 struct_template = """
 """
 
-host_vardef_template = """
-"""
-
-varglobal_template = """
-"""
 
 pthrd_h2dcopy_template = """
 INTEGER (C_INT) FUNCTION {name} (data, attrs, attrsize_) BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING 
+    USE global, ONLY : {varname}, {attrname}
     IMPLICIT NONE 
-    {dtype}, DIMENSION(*), INTENT(IN) :: data
+    {dtype}, DIMENSION(*), INTENT(IN), TARGET :: data
     INTEGER (C_INT), DIMENSION(*), INTENT(IN) :: attrs
     INTEGER (C_INT), INTENT(IN) :: attrsize_
-    INTEGER :: attrsize, i, j
 
-    attrsize = LOC(attrsize_)
-    PRINT *, attrsize
-    DO i=1, attrsize
-        print *, attrs(i)
-    END DO
-    DO j=1, attrs(3)
-        print *, data(j)
-    END DO
+    {varname} => data({bound})
+    ALLOCATE({attrname})
+    ALLOCATE({attrname}%attrs(LOC(attrsize_)))
+    {attrname}%attrs(:) = attrs(1:LOC(attrsize_))
 
-    !{hvar}@data = data
-    !ALLOCATE({hvar}@attrs(attrsize))
-    !{hvar}@attrs = attrs
+    !print *, {attrname}%size()
 
     {name} = 0
 
@@ -51,15 +41,18 @@ END FUNCTION
 pthrd_h2dmalloc_template = """
 INTEGER (C_INT) FUNCTION {name} (data, attrs, attrsize_) BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING 
+    USE global, ONLY : {varname}, {attrname}
     IMPLICIT NONE 
-    {dtype}, DIMENSION(*), INTENT(IN) :: data
+    {dtype}, DIMENSION(*), INTENT(IN), TARGET :: data
     INTEGER (C_INT), DIMENSION(*), INTENT(IN) :: attrs
     INTEGER (C_INT), INTENT(IN) :: attrsize_
 
-    !PRINT *, data
-    !{hvar}@data = data
-    !ALLOCATE({hvar}@attrs(attrsize))
-    !{hvar}@attrs = attrs
+    {varname} => data({bound})
+    ALLOCATE({attrname})
+    ALLOCATE({attrname}%attrs(LOC(attrsize_)))
+    {attrname}%attrs(:) = attrs(1:LOC(attrsize_))
+
+    !print *, {attrname}%size()
 
     {name} = 0
 
@@ -72,9 +65,6 @@ INTEGER (C_INT) FUNCTION {name} (data) BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING 
     IMPLICIT NONE 
     {dtype}, DIMENSION(*), INTENT(OUT) :: data
-
-    !PRINT *, data
-    !{hvar}@data = data
 
     {name} = 0
 
@@ -89,6 +79,7 @@ function_template = """
 """
 
 calldevmain_template = """
+{body}
 """
 
 class FortranBackend(FortranBackendBase):
@@ -150,34 +141,24 @@ class FortranBackend(FortranBackendBase):
         return ((data.ndim, data.itemsize, data.size) + data.shape +
                 tuple([int(s//data.itemsize) for s in data.strides]))
 
-    def code_varclass(self):
+    def code_attrtype(self):
 
-        dvs = {}
+        return fortran_attrtype_template
+
+    def code_attrproc(self):
+
+        return fortran_attrproc_template
+
+    def code_varattr(self):
+
+        data = []
 
         for arg in self.inargs+self.outargs:
 
-            ndim, dname = self.getname_argpair(arg)
+            data.append(arg["curname"])
+            data.append(arg["curname"]+"_")
 
-            if dname in dvs:
-                dvsd = dvs[dname]
-
-            else:
-                dvsd = {}
-                dvs[dname] = dvsd
-                
-            if ndim not in dvsd:
-                oparg = ", ".join(["int dim%d"%d for d in
-                                    range(arg["data"].ndim)])
-                offset = "+".join(["s[%d]*dim%d"%(d,d) for d in
-                                    range(arg["data"].ndim)])
-                attrsize = self.len_numpyattrs(arg)
-
-                hvartype = self.getname_vartype(arg, "host")
-                dvsd[ndim] = fortran_varclass_template.format(vartype=hvartype, oparg=oparg,
-                        offset=offset, funcprefix="", dtype=dname,
-                        attrsize=attrsize)
-
-        return "\n".join([y for x in dvs.values() for y in x.values()])
+        return ",".join(data)
 
     def code_struct(self):
 
@@ -193,19 +174,27 @@ class FortranBackend(FortranBackendBase):
 
         return struct_template.format(args="\n".join(out))
 
-    def code_varglobal(self):
+    def code_attrdef(self):
 
-        out = []
+        out = ""
 
         for arg in self.inargs+self.outargs:
 
-            ndim, dname = self.getname_argpair(arg)
+            out += "CLASS(attrtype), ALLOCATABLE :: %s\n" % (arg["curname"]+"_")
 
-            varname = self.getname_var(arg, "host")
+        return out
 
-            out.append(".{name} = &{name}".format(name=varname))
-
-        return varglobal_template.format(varassign=",\n".join(out))
+#        out = []
+#
+#        for arg in self.inargs+self.outargs:
+#
+#            ndim, dname = self.getname_argpair(arg)
+#
+#            varname = self.getname_var(arg, "host")
+#
+#            out.append(".{name} = &{name}".format(name=varname))
+#
+#        return attrdef_template.format(varassign=",\n".join(out))
 
     def code_vardef(self):
 
@@ -214,9 +203,8 @@ class FortranBackend(FortranBackendBase):
         for arg in self.inargs+self.outargs:
 
             ndim, dname = self.getname_argpair(arg)
-
-            out += host_vardef_template.format(vartype=self.getname_vartype(arg,
-                    "host"), varname=self.getname_var(arg, "host"))
+            shape = ",".join((":",)*ndim)
+            out += "%s, DIMENSION(%s), POINTER :: %s\n" % (dname, shape, arg["curname"])
 
         return out
 
@@ -255,8 +243,13 @@ class FortranBackend(FortranBackendBase):
             fname = self.getname_h2dcopy(arg)
 
             template = self.get_template("h2dcopy")
-            hvar = self.getname_var(arg, "host")
-            out += template.format(hvar=hvar, name=fname, dtype=dname)
+
+            bound = []
+            for idx, shape in enumerate(arg["data"].shape):
+                bound.append("1:attrs(%d)" % (idx+4))
+
+            out += template.format(name=fname, dtype=dname,
+                    varname=arg["curname"], attrname=arg["curname"]+"_", bound=",".join(bound))
 
         for arg in self.outargs:
 
@@ -264,8 +257,13 @@ class FortranBackend(FortranBackendBase):
             fname = self.getname_h2dmalloc(arg)
 
             template = self.get_template("h2dmalloc")
-            hvar = self.getname_var(arg, "host")
-            out += template.format(hvar=hvar, name=fname, dtype=dname)
+
+            bound = []
+            for idx, shape in enumerate(arg["data"].shape):
+                bound.append("1:attrs(%d)" % (idx+4))
+
+            out += template.format(name=fname, dtype=dname,
+                    varname=arg["curname"], attrname=arg["curname"]+"_", bound=",".join(bound))
 
         return out
 
@@ -279,8 +277,8 @@ class FortranBackend(FortranBackendBase):
             fname = self.getname_d2hcopy(arg)
 
             template = self.get_template("d2hcopy")
-            hvar = self.getname_var(arg, "host")
-            out += template.format(hvar=hvar, name=fname, dtype=dname)
+
+            out += template.format(name=fname, dtype=dname)
 
         return out
 
@@ -296,8 +294,12 @@ class FortranBackend(FortranBackendBase):
         # testing
         #args.append("1")
 
-        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
-        return calldevmain_template.format(nthreads=str(nthreads))
+        #nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+        #return calldevmain_template.format(nthreads=str(nthreads))
+
+        body = str(self.order.get_section(self.name))
+
+        return calldevmain_template.format(body=body)
 
     def get_template(self, name):
 

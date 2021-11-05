@@ -25,6 +25,8 @@
 
 [fortran]
 
-	DO id=1, x.shape(1)
+    INTEGER id
+
+	DO id=1, x_%shape(1)
 		z(id) = x(id) + y(id)
 	END DO
