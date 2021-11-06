@@ -39,7 +39,7 @@ class Compiler(abc.ABC):
         opt = " ".join(self.flags) if self.flags else ""
 
         if linker is False:
-            opt += " -c"
+            opt += " -c "
 
         return opt
 
@@ -65,11 +65,11 @@ class Fortran_Compiler(Compiler):
 
     def get_option(self, **kwargs):
 
-        opt = ""
+        opt = " "
 
         moddir = kwargs.pop("moddir", None)
         if moddir:
-            opt = "-J " + moddir
+            opt = "-J %s " % moddir
 
         return opt + super(Fortran_Compiler, self).get_option(**kwargs)
 
@@ -302,7 +302,7 @@ class Gnu_Fortran_Compiler(Fortran_Compiler):
 
     def get_option(self, **kwargs):
 
-        opt = ""
+        opt = " "
 
         return "-shared -fPIC " + opt + super(Gnu_Fortran_Compiler,
             self).get_option(**kwargs)
@@ -323,7 +323,7 @@ class AmdFlang_Fortran_Compiler(Fortran_Compiler):
 
     def get_option(self, **kwargs):
 
-        opt = ""
+        opt = " "
 
         return "-shared " + opt + super(AmdFlang_Fortran_Compiler,
             self).get_option(**kwargs)
@@ -347,7 +347,7 @@ class Cray_Fortran_Compiler(Fortran_Compiler):
 
     def get_option(self, **kwargs):
 
-        opt = ""
+        opt = " "
 
         return "-shared " + opt + super(Cray_Fortran_Compiler,
             self).get_option(**kwargs)
@@ -403,11 +403,11 @@ class IbmXl_Fortran_Compiler(Fortran_Compiler):
 
     def get_option(self, **kwargs):
 
-        opt = ""
+        opt = " "
 
         moddir = kwargs.pop("moddir", None)
         if moddir:
-            opt = "-qmoddir=" + moddir
+            opt = "-qmoddir=%s " % moddir
 
         return "-qmkshrobj " + opt + super(IbmXl_Fortran_Compiler,
             self).get_option(**kwargs)
@@ -415,6 +415,29 @@ class IbmXl_Fortran_Compiler(Fortran_Compiler):
     def check_version(self, version):
 
         return version.startswith("IBM XL Fortran")
+
+
+class Pgi_Fortran_Compiler(Fortran_Compiler):
+
+    def __init__(self, path, flags):
+
+        if path is None:
+            path = which("pgfortran")
+
+        super(Pgi_Fortran_Compiler, self).__init__(path, flags)
+
+    def get_option(self, **kwargs):
+
+        opt = " "
+
+        moddir = kwargs.pop("moddir", None)
+        if moddir:
+            opt = "-module %s " % moddir
+
+        return "-shared " + opt + super(Pgi_Fortran_Compiler, self).get_option(**kwargs)
+
+    def check_version(self, version):
+        return version.startswith("pgfortran") and "PGI" in version
 
 
 class Compilers(object):
@@ -442,7 +465,7 @@ class Compilers(object):
 
         elif backend == "fortran":
             clist =  [AmdFlang_Fortran_Compiler, Cray_Fortran_Compiler,
-                        IbmXl_Fortran_Compiler,
+                        Pgi_Fortran_Compiler, IbmXl_Fortran_Compiler,
                         AppleGnu_Fortran_Compiler, Gnu_Fortran_Compiler]
 
         else:
