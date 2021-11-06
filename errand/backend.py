@@ -661,7 +661,7 @@ END FUNCTION
 
         libpath = os.path.join(self.workdir, fname_main + "." + self.libext)
 
-        cmd = "%s %s -o %s %s %s" % (compiler.path, compiler.get_option(), libpath,
+        cmd = "%s %s -o %s %s %s" % (compiler.path, compiler.get_option(moddir=self.workdir), libpath,
                                   codepath, modoutpath)
 
         #import pdb; pdb.set_trace()

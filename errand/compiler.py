@@ -63,6 +63,16 @@ class Fortran_Compiler(Compiler):
     def __init__(self, path, flags):
         super(Fortran_Compiler, self).__init__(path, flags)
 
+    def get_option(self, **kwargs):
+
+        opt = ""
+
+        moddir = kwargs.pop("moddir", None)
+        if moddir:
+            opt = "-J " + moddir
+
+        return opt + super(Fortran_Compiler, self).get_option(**kwargs)
+
 
 class AppleClang_Cpp_Compiler(Cpp_Compiler):
 
@@ -104,7 +114,7 @@ class AmdClang_Cpp_Compiler(Cpp_Compiler):
     def __init__(self, path, flags):
 
         if path is None:
-            path = which("CC")
+            path = which("clang")
 
         super(AmdClang_Cpp_Compiler, self).__init__(path, flags)
 
@@ -288,16 +298,33 @@ class Gnu_Fortran_Compiler(Fortran_Compiler):
 
         opt = ""
 
-        moddir = kwargs.pop("moddir", None)
-        if moddir:
-            opt = "-J " + moddir
-
         return "-shared -fPIC " + opt + super(Gnu_Fortran_Compiler,
             self).get_option(**kwargs)
 
     def check_version(self, version):
 
         return version.startswith("GNU Fortran")
+
+
+class AmdFlang_Fortran_Compiler(Fortran_Compiler):
+
+    def __init__(self, path, flags):
+
+        if path is None:
+            path = which("flang")
+
+        super(AmdFlang_Fortran_Compiler, self).__init__(path, flags)
+
+    def get_option(self, **kwargs):
+
+        opt = ""
+
+        return "-shared " + opt + super(AmdFlang_Fortran_Compiler,
+            self).get_option(**kwargs)
+
+    def check_version(self, version):
+
+        return version.startswith("flang-new version") and "roc" in version
 
 
 class Cray_Fortran_Compiler(Fortran_Compiler):
@@ -355,8 +382,8 @@ class Compilers(object):
                       OpenAcc_Pgi_Cpp_Compiler]
 
         elif backend == "fortran":
-            clist =  [Cray_Fortran_Compiler, AppleGnu_Fortran_Compiler,
-                        Gnu_Fortran_Compiler]
+            clist =  [AmdFlang_Fortran_Compiler, Cray_Fortran_Compiler,
+                        AppleGnu_Fortran_Compiler, Gnu_Fortran_Compiler]
 
         else:
             raise Exception("Compiler for '%s' is not supported." % backend)
