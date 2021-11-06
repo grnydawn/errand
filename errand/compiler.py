@@ -148,6 +148,12 @@ class CrayClang_Cpp_Compiler(Cpp_Compiler):
         if path is None:
             path = which("CC")
 
+        if path is None:
+            path = which("clang++")
+
+        if path is None:
+            path = which("crayCC")
+
         super(CrayClang_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self, **kwargs):
@@ -334,6 +340,9 @@ class Cray_Fortran_Compiler(Fortran_Compiler):
         if path is None:
             path = which("ftn")
 
+        if path is None:
+            path = which("crayftn")
+
         super(Cray_Fortran_Compiler, self).__init__(path, flags)
 
     def get_option(self, **kwargs):
@@ -356,6 +365,56 @@ class AppleGnu_Fortran_Compiler(Gnu_Fortran_Compiler):
 
         return sys.platform == "darwin" and super(AppleGnu_Fortran_Compiler,
                 self).check_version(version)
+
+
+class IbmXl_Fortran_Compiler(Fortran_Compiler):
+
+    def __init__(self, path, flags):
+
+        if path is None:
+            path = which("xlf2008_r")
+
+        if path is None:
+            path = which("xlf2008")
+
+        if path is None:
+            path = which("xlf2003_r")
+
+        if path is None:
+            path = which("xlf2003")
+
+        if path is None:
+            path = which("xlf95_r")
+
+        if path is None:
+            path = which("xlf95")
+
+        if path is None:
+            path = which("xlf90_r")
+
+        if path is None:
+            path = which("xlf90")
+
+        super(IbmXl_Fortran_Compiler, self).__init__(path, flags)
+
+    def get_version(self):
+        ver = shellcmd("%s -qversion" % self.path).stdout.decode()
+        return ver.strip() if ver else None
+
+    def get_option(self, **kwargs):
+
+        opt = ""
+
+        moddir = kwargs.pop("moddir", None)
+        if moddir:
+            opt = "-qmoddir=" + moddir
+
+        return "-qmkshrobj " + opt + super(IbmXl_Fortran_Compiler,
+            self).get_option(**kwargs)
+
+    def check_version(self, version):
+
+        return version.startswith("IBM XL Fortran")
 
 
 class Compilers(object):
@@ -383,6 +442,7 @@ class Compilers(object):
 
         elif backend == "fortran":
             clist =  [AmdFlang_Fortran_Compiler, Cray_Fortran_Compiler,
+                        IbmXl_Fortran_Compiler,
                         AppleGnu_Fortran_Compiler, Gnu_Fortran_Compiler]
 
         else:
