@@ -9,7 +9,7 @@ def main():
 
     setup(
         name="errand",
-        version="0.2.8",
+        version="0.2.9",
         description="pythonic excellerator interface",
         long_description="pythonic excellerator interface",
         author="Youngsung Kim",
