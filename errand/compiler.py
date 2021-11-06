@@ -32,7 +32,10 @@ class Compiler(abc.ABC):
             self.version = version
 
     @abc.abstractmethod
-    def get_option(self, linker=True):
+    def get_option(self, **kwargs):
+
+        linker = kwargs.pop("linker", True)
+
         opt = " ".join(self.flags) if self.flags else ""
 
         if linker is False:
@@ -297,6 +300,27 @@ class Gnu_Fortran_Compiler(Fortran_Compiler):
         return version.startswith("GNU Fortran")
 
 
+class Cray_Fortran_Compiler(Fortran_Compiler):
+
+    def __init__(self, path, flags):
+
+        if path is None:
+            path = which("ftn")
+
+        super(Cray_Fortran_Compiler, self).__init__(path, flags)
+
+    def get_option(self, **kwargs):
+
+        opt = ""
+
+        return "-shared " + opt + super(Cray_Fortran_Compiler,
+            self).get_option(**kwargs)
+
+    def check_version(self, version):
+
+        return version.startswith("Cray Fortran")
+
+
 class AppleGnu_Fortran_Compiler(Gnu_Fortran_Compiler):
 
     libext = "dylib"
@@ -331,7 +355,8 @@ class Compilers(object):
                       OpenAcc_Pgi_Cpp_Compiler]
 
         elif backend == "fortran":
-            clist =  [AppleGnu_Fortran_Compiler, Gnu_Fortran_Compiler]
+            clist =  [Cray_Fortran_Compiler, AppleGnu_Fortran_Compiler,
+                        Gnu_Fortran_Compiler]
 
         else:
             raise Exception("Compiler for '%s' is not supported." % backend)

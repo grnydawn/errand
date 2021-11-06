@@ -29,8 +29,8 @@ INTEGER (C_INT) FUNCTION {name} (data, attrs, attrsize_) BIND(C)
 
     {varname} => data
     ALLOCATE({attrname})
-    ALLOCATE({attrname}%attrs(LOC(attrsize_)))
-    {attrname}%attrs(:) = attrs(1:LOC(attrsize_))
+    ALLOCATE({attrname}%attrs({attrsize}))
+    {attrname}%attrs(:) = attrs(1:{attrsize})
 
 !    DO i=1,{attrname}%shape(1)
 !        DO j=1,{attrname}%shape(2)
@@ -55,8 +55,8 @@ INTEGER (C_INT) FUNCTION {name} (data, attrs, attrsize_) BIND(C)
 
     {varname} => data
     ALLOCATE({attrname})
-    ALLOCATE({attrname}%attrs(LOC(attrsize_)))
-    {attrname}%attrs(:) = attrs(1:LOC(attrsize_))
+    ALLOCATE({attrname}%attrs({attrsize}))
+    {attrname}%attrs(:) = attrs(1:{attrsize})
 
     !print *, {attrname}%size()
 
@@ -257,9 +257,11 @@ class FortranBackend(FortranBackendBase):
             for s in arg["data"].shape:
                 bound.append("%d" % s)
 
+            attrsize = self.len_numpyattrs(arg)
+
             out += template.format(name=fname, dtype=dname,
                     varname=arg["curname"], attrname=arg["curname"]+"_",
-                    bound=",".join(bound))
+                    bound=",".join(bound), attrsize=str(attrsize))
 
         for arg in self.outargs:
 
@@ -272,9 +274,11 @@ class FortranBackend(FortranBackendBase):
             for s in arg["data"].shape:
                 bound.append("%d" % s)
 
+            attrsize = self.len_numpyattrs(arg)
+
             out += template.format(name=fname, dtype=dname,
                     varname=arg["curname"], attrname=arg["curname"]+"_",
-                    bound=",".join(bound))
+                    bound=",".join(bound), attrsize=str(attrsize))
 
         return out
 
