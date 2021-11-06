@@ -434,7 +434,7 @@ class Pgi_Fortran_Compiler(Fortran_Compiler):
         if moddir:
             opt = "-module %s " % moddir
 
-        return "-shared " + opt + super(Pgi_Fortran_Compiler, self).get_option(**kwargs)
+        return "-shared -fpic " + opt + super(Pgi_Fortran_Compiler, self).get_option(**kwargs)
 
     def check_version(self, version):
         return version.startswith("pgfortran") and "PGI" in version
