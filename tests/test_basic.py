@@ -5,11 +5,12 @@ import pytest
 from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
+test_backends = ["cuda", "hip", "pthread", "openacc-c++", "c++", "fortran"]
 #test_backends = ["cuda", "hip", "pthread"]
 #test_backends = ["hip", "pthread", "openacc-c++", "c++"]
 #test_backends = ["hip"]
 #test_backends = ["c++"]
-test_backends = ["fortran"]
+#test_backends = ["fortran"]
 #test_backends = ["cuda"]
 #test_backends = ["cuda", "pthread"]
 #test_backends = ["cuda", "pthread", "openacc-c++"]
@@ -73,7 +74,7 @@ def test_vecadd2d(backend):
     #b = np.ones((NROW, NCOL))
     a = np.arange(NROW*NCOL).reshape(NROW, NCOL)
     b = np.arange(NROW*NCOL).reshape(NROW, NCOL)
-    c = np.zeros((NROW, NCOL))
+    c = np.zeros((NROW, NCOL), dtype=np.int64)
 
     order = os.path.join(here, "res", "vecadd2d.ord")
 

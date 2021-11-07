@@ -52,6 +52,7 @@ public:
             q = r / s;
             r = r % s;
         }}
+
         return q;
     }}
 }};
@@ -386,7 +387,7 @@ extern "C" int run() {{
 
         for arg in inargs:
 
-            arg["data"] = np.asfortranarray(arg["data"])
+            #arg["data"] = np.asfortranarray(arg["data"])
             attrs = self.get_numpyattrs(arg)
             cattrs = c_int*len(attrs)
 
