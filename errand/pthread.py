@@ -81,27 +81,7 @@ void * _kernel(void * ptr){{
 }}
 """
 
-ffunction_template = """
-void * _join(void * ptr){{
-
-    WRAPARGSTYPE * args = (WRAPARGSTYPE *) ptr;
-
-    for (int i=0; i < {nthreads}; i++) {{
-
-        while (args[i].state < 2) {{
-        //while (thlist->args[i].state < 2) {{
-            sleep(0.001);
-        }}
-    }}
-
-    errand_isfinished = 1;
-
-    return NULL;
-}}
-"""
-
 calldevmain_template = """
-
     WRAPARGSTYPE args[{nthreads}];
 
     for (int i=0; i < {nthreads}; i++) {{
@@ -122,7 +102,6 @@ calldevmain_template = """
             do {{ }} while(0);
         }}
     }}
-
 """
 
 stopbody_template = """
@@ -286,11 +265,6 @@ int * errand_thread_state;
 
         return out
 
-#    def code_function(self):
-#
-#        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
-#        return function_template.format(nthreads=str(nthreads))
-
     def code_devfunc(self):
 
         argdef = []
@@ -302,7 +276,6 @@ int * errand_thread_state;
 
             ndim, dname = self.getname_argpair(arg)
 
-            #argdef.append("host_%s_dim%s %s = host_%s_dim%s();" % (dname, ndim, arg["curname"], dname, ndim))
             argdef.append("host_%s_dim%s %s;" % (dname, ndim, arg["curname"]))
             argassign.append("%s = *(args->data->host_%s);" % (arg["curname"], arg["curname"]))
 
