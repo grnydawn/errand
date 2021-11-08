@@ -440,6 +440,12 @@ class Pgi_Fortran_Compiler(Fortran_Compiler):
         return version.startswith("pgfortran") and "PGI" in version
 
 
+class Pthread_Gnu_Fortran_Compiler(Gnu_Fortran_Compiler):
+
+    def get_option(self, **kwargs):
+        return "-pthread " + super(Pthread_Gnu_Fortran_Compiler, self).get_option(**kwargs)
+
+
 class Compilers(object):
 
     def __init__(self, backend, compile):
@@ -448,12 +454,7 @@ class Compilers(object):
 
         clist = []
 
-        if backend in ("pthread", "c++"):
-            clist =  [Pthread_Gnu_Cpp_Compiler, Pthread_CrayClang_Cpp_Compiler,
-                      Pthread_AmdClang_Cpp_Compiler, Pthread_Pgi_Cpp_Compiler,
-                      Pthread_AppleClang_Cpp_Compiler]
-
-        elif backend == "cuda":
+        if backend == "cuda":
             clist =  [Cuda_Cpp_Compiler]
 
         elif backend == "hip":
@@ -462,6 +463,19 @@ class Compilers(object):
         elif backend == "openacc-c++":
             clist =  [OpenAcc_Gnu_Cpp_Compiler, OpenAcc_CrayClang_Cpp_Compiler,
                       OpenAcc_Pgi_Cpp_Compiler]
+
+        elif backend == "pthread":
+            clist =  [Pthread_Gnu_Cpp_Compiler, Pthread_CrayClang_Cpp_Compiler,
+                      Pthread_AmdClang_Cpp_Compiler, Pthread_Pgi_Cpp_Compiler,
+                      Pthread_AppleClang_Cpp_Compiler]
+
+        elif backend == "pthread-fortran":
+            clist =  [Pthread_Gnu_Fortran_Compiler]
+
+        elif backend == "c++":
+            clist =  [Gnu_Cpp_Compiler, CrayClang_Cpp_Compiler,
+                      AmdClang_Cpp_Compiler, Pgi_Cpp_Compiler,
+                      AppleClang_Cpp_Compiler]
 
         elif backend == "fortran":
             clist =  [AmdFlang_Fortran_Compiler, Cray_Fortran_Compiler,

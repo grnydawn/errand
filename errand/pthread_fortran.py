@@ -1,4 +1,4 @@
-"""Errand Fortran backend module
+"""Errand PThread Fortran backend module
 
 
 """
@@ -91,9 +91,9 @@ calldevmain_template = """
 {body}
 """
 
-class FortranBackend(FortranBackendBase):
+class PThreadFortranBackend(FortranBackendBase):
 
-    name = "fortran"
+    name = "pthread-fortran"
     codeext = "f90"
     libext = "so"
 
@@ -104,9 +104,6 @@ class FortranBackend(FortranBackendBase):
 
         super(FortranBackend, self).__init__(workdir, compilers,
             targetsystem)
-
-    #def compiler_option(self):
-    #    return self.option + "--compiler-options '-fPIC' --shared"
 
     def getname_h2dcopy(self, arg):
 

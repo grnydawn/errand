@@ -560,9 +560,6 @@ END FUNCTION
     def code_header(self):
         return ""
 
-    def code_namespace(self):
-        return ""
-
     def code_attrtype(self):
         return ""
 
@@ -634,8 +631,6 @@ END FUNCTION
 
         # generate source code
         top = self.code_top()
-        header = self.code_header()
-        namespace = self.code_namespace()
         attrtype = self.code_attrtype()
         attrproc = self.code_attrproc()
         varattr = self.code_varattr()
@@ -676,8 +671,8 @@ END FUNCTION
             sys.exit(out_mod.returncode)
 
         # compile main
-        main_code = self.fortran_code_template.format(top=top, header=header,
-            namespace=namespace, varattr=varattr, stopbody=stopbody,
+        main_code = self.fortran_code_template.format(top=top,
+            varattr=varattr, stopbody=stopbody,
             h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
             devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
             postrun=postrun, tail=tail, function=function)
@@ -786,6 +781,7 @@ def select_backends(backend, compile, order, workdir):
         from errand.openacc_cpp import OpenAccCppBackend
         from errand.cpp import CppBackend
         from errand.fortran import FortranBackend
+        from errand.pthread_fortran import PThreadFortranBackend
 
         _installed_backends[CudaBackend.name] = CudaBackend
         _installed_backends[HipBackend.name] = HipBackend
@@ -793,6 +789,7 @@ def select_backends(backend, compile, order, workdir):
         _installed_backends[OpenAccCppBackend.name] = OpenAccCppBackend
         _installed_backends[CppBackend.name] = CppBackend
         _installed_backends[FortranBackend.name] = FortranBackend
+        _installed_backends[PThreadFortranBackend.name] = PThreadFortranBackend
 
     candidate = None
 
