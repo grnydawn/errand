@@ -119,7 +119,7 @@ class AmdClang_Cpp_Compiler(Cpp_Compiler):
         super(AmdClang_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self, **kwargs):
-        return "-shared " + super(AmdClang_Cpp_Compiler, self).get_option(**kwargs)
+        return "-shared -fPIC " + super(AmdClang_Cpp_Compiler, self).get_option(**kwargs)
 
     def check_version(self, version):
         return version.startswith("clang version") and "roc" in version
