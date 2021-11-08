@@ -184,13 +184,26 @@ class Backend(abc.ABC):
     def get_numpyattrs(self, arg):
         pass
 
-    @abc.abstractmethod
-    def run(self):
-        pass
+    def start(self):
+        if self.sharedlib:
+            return getattr(self.sharedlib, "start")()
 
-    @abc.abstractmethod
-    def isalive(self):
-        pass
+        else:
+            return -1
+
+    def stop(self):
+        if self.sharedlib:
+            return getattr(self.sharedlib, "stop")()
+
+        else:
+            return -1
+
+    def isbusy(self):
+        if self.sharedlib:
+            return getattr(self.sharedlib, "isbusy")()
+
+        else:
+            return -1
 
 
 class CppBackendBase(Backend):
@@ -212,8 +225,6 @@ class CppBackendBase(Backend):
 
 {struct}
 
-int isfinished = 0;
-
 {vardef}
 
 {varglobal}
@@ -226,12 +237,13 @@ int isfinished = 0;
 
 {devfunc}
 
-extern "C" int isalive() {{
+extern "C" int isbusy() {{
 
-    return isfinished;
+    {isbusybody}
+
 }}
 
-extern "C" int run() {{
+extern "C" int start() {{
 
     {prerun}
 
@@ -241,6 +253,14 @@ extern "C" int run() {{
 
     return 0;
 }}
+
+extern "C" int stop() {{
+
+    {stopbody}
+
+    return 0;
+}}
+
 {tail}
 """
 
@@ -295,6 +315,14 @@ extern "C" int run() {{
     def code_postrun(self):
         return ""
 
+    @abc.abstractmethod
+    def code_stopbody(self):
+        pass
+
+    @abc.abstractmethod
+    def code_isbusybody(self):
+        pass
+
     def code_tail(self):
         return ""
  
@@ -331,6 +359,8 @@ extern "C" int run() {{
         prerun = self.code_prerun()
         calldevmain = self.code_calldevmain()
         postrun = self.code_postrun()
+        stopbody = self.code_stopbody()
+        isbusybody = self.code_isbusybody()
         tail = self.code_tail()
 
         code = self.cpp_code_template.format(top=top, header=header,
@@ -338,7 +368,7 @@ extern "C" int run() {{
             h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
             devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
             postrun=postrun, tail=tail, struct=struct, function=function,
-            varglobal=varglobal)
+            varglobal=varglobal, stopbody=stopbody, isbusybody=isbusybody)
 
         compiler = self.get_compiler()
         if compiler is None:
@@ -436,20 +466,6 @@ extern "C" int run() {{
             if type(arg["data"]) != type(arg["orgdata"]):
                 self._copy2orgdata(arg)
 
-    def run(self):
-        if self.sharedlib:
-            return getattr(self.sharedlib, "run")()
-
-        else:
-            return -1
-
-    def isalive(self):
-        if self.sharedlib:
-            return getattr(self.sharedlib, "isalive")()
-
-        else:
-            return -1
-
 
 class FortranBackendBase(Backend):
     """Errand Fortran BackendBase class
@@ -471,7 +487,7 @@ MODULE global
 
 {struct}
 
-INTEGER (C_INT):: isfinished = 0
+INTEGER (C_INT):: errand_isfinished = 0
 
 {vardef}
 
@@ -486,12 +502,12 @@ END MODULE
     fortran_code_template = """
 {top}
 
-INTEGER (C_INT) FUNCTION isalive() BIND(C)
+INTEGER (C_INT) FUNCTION isbusy() BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING
-    USE global, only : isfinished
+    USE global, only : errand_isfinished
     IMPLICIT NONE
 
-    isalive = isfinished
+    isbusy = errand_isfinished
 END FUNCTION
 
 {function}
@@ -502,7 +518,7 @@ END FUNCTION
 
 {devfunc}
 
-INTEGER (C_INT) FUNCTION run() BIND(C)
+INTEGER (C_INT) FUNCTION start() BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING
     USE global, ONLY : {varattr}
     IMPLICIT NONE
@@ -513,7 +529,18 @@ INTEGER (C_INT) FUNCTION run() BIND(C)
 
     {postrun}
 
-    run = 0
+    start = 0
+
+END FUNCTION
+
+INTEGER (C_INT) FUNCTION stop() BIND(C)
+    USE, INTRINSIC :: ISO_C_BINDING
+    USE global, ONLY : {threads}
+    IMPLICIT NONE
+
+    {stopbody}
+
+    stop = 0
 
 END FUNCTION
 
@@ -577,6 +604,9 @@ END FUNCTION
     def code_postrun(self):
         return ""
 
+    def code_stopbody(self):
+        return ""
+
     def code_tail(self):
         return ""
  
@@ -619,6 +649,7 @@ END FUNCTION
         prerun = self.code_prerun()
         calldevmain = self.code_calldevmain()
         postrun = self.code_postrun()
+        stopbody = self.code_stopbody()
         tail = self.code_tail()
 
         # compile module
@@ -646,7 +677,7 @@ END FUNCTION
 
         # compile main
         main_code = self.fortran_code_template.format(top=top, header=header,
-            namespace=namespace, varattr=varattr,
+            namespace=namespace, varattr=varattr, stopbody=stopbody,
             h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
             devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
             postrun=postrun, tail=tail, function=function)
@@ -665,6 +696,7 @@ END FUNCTION
         cmd = "%s %s -o %s %s %s" % (compiler.path, compiler.get_option(moddir=self.workdir), libpath,
                                   codepath, modoutpath)
 
+        # FORTRAN
         #import pdb; pdb.set_trace()
         out = shellcmd(cmd)
 
@@ -744,20 +776,6 @@ END FUNCTION
 
             if type(arg["data"]) != type(arg["orgdata"]):
                 self._copy2orgdata(arg)
-
-    def run(self):
-        if self.sharedlib:
-            return getattr(self.sharedlib, "run")()
-
-        else:
-            return -1
-
-    def isalive(self):
-        if self.sharedlib:
-            return getattr(self.sharedlib, "isalive")()
-
-        else:
-            return -1
 
 
 def select_backends(backend, compile, order, workdir):

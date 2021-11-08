@@ -20,8 +20,8 @@ typedef struct arguments {{
 typedef struct wrap_args {{
     ARGSTYPE * data;
     int tid;
-    int state;
 }} WRAPARGSTYPE;
+
 """
 
 host_vardef_template = """
@@ -69,19 +69,19 @@ void * _kernel(void * ptr){{
 
     WRAPARGSTYPE * args = (WRAPARGSTYPE *)ptr;
 
-    args->state = 1;
+    errand_thread_state[args->tid] = 1;
 
     {argassign}
 
     {body}
 
-    args->state = 2;
+    errand_thread_state[args->tid] = 2;
 
     return NULL;
 }}
 """
 
-function_template = """
+ffunction_template = """
 void * _join(void * ptr){{
 
     WRAPARGSTYPE * args = (WRAPARGSTYPE *) ptr;
@@ -89,11 +89,12 @@ void * _join(void * ptr){{
     for (int i=0; i < {nthreads}; i++) {{
 
         while (args[i].state < 2) {{
+        //while (thlist->args[i].state < 2) {{
             sleep(0.001);
         }}
     }}
 
-    isfinished = 1;
+    errand_isfinished = 1;
 
     return NULL;
 }}
@@ -101,36 +102,48 @@ void * _join(void * ptr){{
 
 calldevmain_template = """
 
-    pthread_t threads[{nthreads}+1];
     WRAPARGSTYPE args[{nthreads}];
-
-    pthread_attr_t attr;
-
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
     for (int i=0; i < {nthreads}; i++) {{
 
+        errand_thread_state[i] = 0;
+
         args[i].tid = i;
-        args[i].state = 0;
         args[i].data = &struct_args;
 
-        if (pthread_create(&(threads[i]), &attr, _kernel, &(args[i]))) {{
-            isfinished = -1;
-            return -1;
+        if (pthread_create(&(errand_threads[i]), NULL, _kernel, &(args[i]))) {{
+            errand_thread_state[i] = -1;
         }}
     }}
 
-    pthread_create(&(threads[{nthreads}]), &attr, _join, &(args[0]));
-
     for (int i=0; i < {nthreads}; i++) {{
 
-        while (args[i].state == 0) {{
+        while (errand_thread_state[i] == 0) {{
             do {{ }} while(0);
         }}
     }}
 
 """
+
+stopbody_template = """
+    for (int i=0; i < {nthreads}; i++) {{
+        pthread_join(errand_threads[i], NULL);
+    }}
+
+    free(errand_threads);
+    free(errand_thread_state);
+
+"""
+
+isbusybody_template = """
+    for (int i=0; i < {nthreads}; i++) {{
+        if (errand_thread_state[i] >= 0 && errand_thread_state[i] < 2)
+            return 1;
+    }}
+
+    return 0;
+"""
+
 
 class PThreadBackend(CppBackendBase):
 
@@ -247,9 +260,22 @@ class PThreadBackend(CppBackendBase):
 
         return varglobal_template.format(varassign=",\n".join(out))
 
+    def code_prerun(self):
+    
+        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+        out = """
+errand_threads = (pthread_t *) malloc(sizeof(pthread_t) * {nthreads});
+errand_thread_state = (int *) malloc(sizeof(int) * {nthreads});
+""".format(nthreads=nthreads)
+
+        return out
+
     def code_vardef(self):
 
-        out = ""
+        out = """
+pthread_t * errand_threads;
+int * errand_thread_state;
+"""
 
         for arg in self.inargs+self.outargs:
 
@@ -260,10 +286,10 @@ class PThreadBackend(CppBackendBase):
 
         return out
 
-    def code_function(self):
-
-        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
-        return function_template.format(nthreads=str(nthreads))
+#    def code_function(self):
+#
+#        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+#        return function_template.format(nthreads=str(nthreads))
 
     def code_devfunc(self):
 
@@ -326,18 +352,19 @@ class PThreadBackend(CppBackendBase):
 
  
     def code_calldevmain(self):
-#
-#        argassign = []
-#
-#        for arg in self.inargs+self.outargs:
-#
-#            args.append(self.getname_var(arg, "host"))
-#
-        # testing
-        #args.append("1")
 
         nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
         return calldevmain_template.format(nthreads=str(nthreads))
+
+    def code_stopbody(self):
+
+        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+        return stopbody_template.format(nthreads=str(nthreads))
+
+    def code_isbusybody(self):
+
+        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+        return isbusybody_template.format(nthreads=str(nthreads))
 
     def get_template(self, name):
 

@@ -33,7 +33,7 @@ class Workshop(object):
 
         backend.h2dcopy(self.inargs, self.outargs)
 
-        res = backend.run()
+        res = backend.start()
 
         if res == 0:
             self.curbackend = backend
@@ -58,17 +58,19 @@ class Workshop(object):
 
         raise Exception("No backend started.")
 
-    # assumes that code.run() is async
+    # assumes that code.start() is async
     def close(self, timeout=None):
 
         if self.curbackend is None:
             raise Exception("No selected backend")
 
-        while self.curbackend.isalive() == 0 and (timeout is None or
+        while self.curbackend.isbusy() != 0 and (timeout is None or
             time.time()-self.start < float(timeout)):
 
             time.sleep(0.1)
 
         res = self.curbackend.d2hcopy(self.outargs)
+
+        self.curbackend.stop()
 
         return res

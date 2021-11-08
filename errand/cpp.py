@@ -89,7 +89,7 @@ void * _join(void * ptr){{
         sleep(0.001);
     }}
 
-    isfinished = 1;
+    errand_isfinished = 1;
 
     return NULL;
 }}

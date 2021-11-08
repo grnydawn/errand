@@ -87,7 +87,7 @@ vector_length({veclen})
 
     args->state = 2;
 
-    isfinished = 1;
+    errand_isfinished = 1;
 
     return NULL;
 }}

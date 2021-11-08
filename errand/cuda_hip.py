@@ -291,7 +291,7 @@ class CudaHipBackend(CppBackendBase):
 
     def code_postrun(self):
         # NOTE: mark finished here; d2h copy will block until gpu run finish.
-        return "    isfinished = 1;";
+        return "    errand_isfinished = 1;";
 
 
 class CudaBackend(CudaHipBackend):
