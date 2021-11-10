@@ -16,7 +16,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 #test_backends = ["cuda", "pthread-c++", "openacc-c++"]
 test_backends = ["c++", "pthread-c++"]
 #test_backends = ["fortran", "pthread-fortran"]
-#test_backends = ["openacc-c++"]
+test_backends = ["openacc-c++"]
 
 @pytest.mark.parametrize("backend", test_backends)
 def test_vecadd1d(backend):

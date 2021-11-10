@@ -128,10 +128,10 @@ calldevmain_template = """
 
 class CudaHipBackend(CppBackendBase):
 
-    def __init__(self, workdir, compilers, targetsystem):
+    def __init__(self, workdir, compilers, targetsystem, **kwargs):
 
         super(CudaHipBackend, self).__init__(workdir, compilers,
-                targetsystem)
+                targetsystem, **kwargs)
 
     def getname_h2dcopy(self, arg):
 
@@ -300,13 +300,13 @@ class CudaBackend(CudaHipBackend):
     codeext = "cu"
     libext = "so"
 
-    def __init__(self, workdir, compile):
+    def __init__(self, workdir, compile, **kwargs):
 
         compilers = Compilers(self.name, compile)
         targetsystem = select_system("nvidia-gpu")
 
         super(CudaBackend, self).__init__(workdir, compilers,
-            targetsystem)
+            targetsystem, **kwargs)
 
     def code_header(self):
 
@@ -335,13 +335,13 @@ class HipBackend(CudaHipBackend):
     codeext = "hip.cpp"
     libext = "so"
 
-    def __init__(self, workdir, compile):
+    def __init__(self, workdir, compile, **kwargs):
 
         compilers = Compilers(self.name, compile)
         targetsystem = select_system("amd-gpu")
 
         super(HipBackend, self).__init__(workdir, compilers,
-            targetsystem)
+            targetsystem, **kwargs)
 
     def code_header(self):
 

@@ -6,7 +6,8 @@
 import os
 import numpy
 
-from errand.backend import CppBackendBase, cpp_varclass_template
+from errand.backend import cpp_varclass_template
+from errand.cpp import CppBackend
 from errand.compiler import Compilers
 from errand.system import select_system
 from errand.util import which
@@ -115,19 +116,13 @@ calldevmain_template = """
 
 """
 
-class OpenAccCppBackend(CppBackendBase):
+class OpenAccCppBackend(CppBackend):
 
     name = "openacc-c++"
-    codeext = "cpp"
-    libext = "so"
 
-    def __init__(self, workdir, compile):
+    def __init__(self, workdir, compile, **kwargs):
 
-        compilers = Compilers(self.name, compile)
-        targetsystem = select_system("cpu")
-
-        super(OpenAccCppBackend, self).__init__(workdir, compilers,
-            targetsystem)
+        super(OpenAccCppBackend, self).__init__(workdir, compile, **kwargs)
 
     #def compiler_option(self):
     #    return self.option + "--compiler-options '-fPIC' --shared"

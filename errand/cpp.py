@@ -107,15 +107,13 @@ class PThreadCppBackend(CppBackendBase):
     name = "pthread-c++"
     libext = "so"
 
-    def __init__(self, workdir, compile, debug=0):
-
-        self._debug = debug
+    def __init__(self, workdir, compile, **kwargs):
 
         compilers = Compilers(self.name, compile)
         targetsystem = select_system("cpu")
 
         super(PThreadCppBackend, self).__init__(workdir, compilers,
-            targetsystem)
+            targetsystem, **kwargs)
 
     def code_header(self):
 
