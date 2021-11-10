@@ -446,6 +446,12 @@ class Pthread_Gnu_Fortran_Compiler(Gnu_Fortran_Compiler):
         return "-pthread " + super(Pthread_Gnu_Fortran_Compiler, self).get_option(**kwargs)
 
 
+class Pthread_AppleGnu_Fortran_Compiler(AppleGnu_Fortran_Compiler):
+
+    def get_option(self, **kwargs):
+        return "-pthread " + super(Pthread_AppleGnu_Fortran_Compiler, self).get_option(**kwargs)
+
+
 class Compilers(object):
 
     def __init__(self, backend, compile):
@@ -470,7 +476,7 @@ class Compilers(object):
                       Pthread_AppleClang_Cpp_Compiler]
 
         elif backend == "pthread-fortran":
-            clist =  [Pthread_Gnu_Fortran_Compiler]
+            clist =  [Pthread_AppleGnu_Fortran_Compiler, Pthread_Gnu_Fortran_Compiler]
 
         elif backend == "c++":
             clist =  [Gnu_Cpp_Compiler, CrayClang_Cpp_Compiler,

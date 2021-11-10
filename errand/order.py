@@ -79,9 +79,10 @@ class SectionList(object):
 
 class Order(object):
 
-    def __init__(self, order, env):
+    def __init__(self, order, env, debug=0):
 
         self._env = env
+        self._debug = debug
 
         if isinstance(order, Order):
             self.header = order.header

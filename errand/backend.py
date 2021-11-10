@@ -10,7 +10,7 @@ import numpy as np
 from numpy.ctypeslib import ndpointer, load_library
 from ctypes import c_int, c_longlong, c_float, c_double, c_size_t
 
-from errand.util import shellcmd, split_compile
+from errand.util import shellcmd, split_compile, DEBUG
 
 _installed_backends = {}
 
@@ -126,8 +126,9 @@ END FUNCTION
 """
 class Backend(abc.ABC):
 
-    def __init__(self, workdir, compilers, targetsystem):
+    def __init__(self, workdir, compilers, targetsystem, debug=0):
 
+        self._debug = debug
         self.workdir = workdir
         self.sharedlib = None
         self.nteams = None
@@ -485,30 +486,24 @@ MODULE global
 
 {attrtype}
 
-{struct}
-
-INTEGER (C_INT):: errand_isfinished = 0
+{typedef}
 
 {vardef}
+
+{modvardef}
 
 {attrdef}
 
 CONTAINS
 
 {attrproc}
+
+{modproc}
 END MODULE
 """
 
     fortran_code_template = """
 {top}
-
-INTEGER (C_INT) FUNCTION isbusy() BIND(C)
-    USE, INTRINSIC :: ISO_C_BINDING
-    USE global, only : errand_isfinished
-    IMPLICIT NONE
-
-    isbusy = errand_isfinished
-END FUNCTION
 
 {function}
 
@@ -516,12 +511,16 @@ END FUNCTION
 
 {d2hcopyfunc}
 
-{devfunc}
+INTEGER (C_INT) FUNCTION isbusy() BIND(C)
+    USE, INTRINSIC :: ISO_C_BINDING
+
+    {isbusybody}
+
+END FUNCTION
 
 INTEGER (C_INT) FUNCTION start() BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING
     USE global, ONLY : {varattr}
-    IMPLICIT NONE
 
     {prerun}
 
@@ -531,16 +530,14 @@ INTEGER (C_INT) FUNCTION start() BIND(C)
 
     start = 0
 
+    {contains}
+
 END FUNCTION
 
 INTEGER (C_INT) FUNCTION stop() BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING
-    USE global, ONLY : {threads}
-    IMPLICIT NONE
 
     {stopbody}
-
-    stop = 0
 
 END FUNCTION
 
@@ -566,13 +563,19 @@ END FUNCTION
     def code_attrproc(self):
         return ""
 
+    def code_modproc(self):
+        return ""
+
     def code_varattr(self):
         return ""
 
-    def code_struct(self):
+    def code_typedef(self):
         return ""
 
     def code_vardef(self):
+        return ""
+
+    def code_modvardef(self):
         return ""
 
     def code_attrdef(self):
@@ -585,7 +588,7 @@ END FUNCTION
         return ""
 
     @abc.abstractmethod
-    def code_devfunc(self):
+    def code_contains(self):
         pass
 
     def code_function(self):
@@ -601,13 +604,21 @@ END FUNCTION
     def code_postrun(self):
         return ""
 
+    @abc.abstractmethod
     def code_stopbody(self):
-        return ""
+        pass
+
+    @abc.abstractmethod
+    def code_isbusybody(self):
+        pass
 
     def code_tail(self):
         return ""
  
     def gencode(self, nteams, nmembers, nassigns, inargs, outargs, order):
+
+        if self._debug >= DEBUG.INFO:
+            print("entering gencode")
 
         innames, outnames = order.get_argnames()
 
@@ -633,24 +644,27 @@ END FUNCTION
         top = self.code_top()
         attrtype = self.code_attrtype()
         attrproc = self.code_attrproc()
+        modproc = self.code_modproc()
         varattr = self.code_varattr()
-        struct = self.code_struct()
+        typedef = self.code_typedef()
         vardef = self.code_vardef()
+        modvardef = self.code_modvardef()
         attrdef = self.code_attrdef()
         h2dcopyfunc = self.code_h2dcopyfunc()
         d2hcopyfunc = self.code_d2hcopyfunc()
-        devfunc = self.code_devfunc()
-        function = self.code_function()
+        contains = self.code_contains()
         prerun = self.code_prerun()
         calldevmain = self.code_calldevmain()
+        function = self.code_function()
         postrun = self.code_postrun()
         stopbody = self.code_stopbody()
+        isbusybody = self.code_isbusybody()
         tail = self.code_tail()
 
         # compile module
         mod_code = self.fortran_module_template.format(attrtype=attrtype,
-                    struct=struct, vardef=vardef, attrdef=attrdef,
-                    attrproc=attrproc)
+                    typedef=typedef, vardef=vardef, attrdef=attrdef,
+                    attrproc=attrproc, modvardef=modvardef, modproc=modproc)
 
         fname_mod = hashlib.md5(mod_code.encode("utf-8")).hexdigest()[:10]
 
@@ -670,11 +684,14 @@ END FUNCTION
             print(out_mod.stderr.decode())
             sys.exit(out_mod.returncode)
 
+        if self._debug >= DEBUG.INFO:
+            print("module code is compiled.")
+
         # compile main
         main_code = self.fortran_code_template.format(top=top,
-            varattr=varattr, stopbody=stopbody,
+            varattr=varattr, stopbody=stopbody, isbusybody=isbusybody,
             h2dcopyfunc=h2dcopyfunc, d2hcopyfunc=d2hcopyfunc,
-            devfunc=devfunc, prerun=prerun, calldevmain=calldevmain,
+            contains=contains, prerun=prerun, calldevmain=calldevmain,
             postrun=postrun, tail=tail, function=function)
 
         fname_main = hashlib.md5(main_code.encode("utf-8")).hexdigest()[:10]
@@ -698,6 +715,9 @@ END FUNCTION
         if out.returncode  != 0:
             print(out.stderr.decode())
             sys.exit(out.returncode)
+
+        if self._debug >= DEBUG.INFO:
+            print("main code is compiled.")
 
         # load the library
         head, tail = os.path.split(libpath)
@@ -773,7 +793,7 @@ END FUNCTION
                 self._copy2orgdata(arg)
 
 
-def select_backends(backend, compile, order, workdir):
+def select_backends(backend, compile, order, workdir, debug=0):
 
     if len(_installed_backends) == 0:
         from errand.cuda_hip import CudaBackend, HipBackend
@@ -821,7 +841,7 @@ def select_backends(backend, compile, order, workdir):
                 if compile is None:
                     compile = split_compile(order.get_section(tname).arg)
 
-                b = s(workdir, compile)
+                b = s(workdir, compile, debug=debug)
                 if b.isavail():
                     selected.append(b)
 

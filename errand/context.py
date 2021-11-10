@@ -11,7 +11,7 @@ from errand.order import Order
 from errand.gofers import Gofers
 from errand.workshop import Workshop
 
-from errand.util import errand_builtins
+from errand.util import errand_builtins, DEBUG
 
 # TODO: supports eval, attributes in order
 # TODO: supports compiler hierachies with compiler wrappers
@@ -23,7 +23,22 @@ class Errand(object):
 * Out of context, OS-related tasks here
 """
 
-    def __init__(self, order, timeout=None):
+    def __init__(self, order, timeout=None, debug=False):
+
+        # DEBUG LEVEL:
+        # True = 1, False = 0
+        # 0: no debug, 1, critical & major, 2: warning, 3: info, 4: develop
+        if debug is True:
+            self._debug = 1
+
+        elif debug is False:
+            self._debug = 0
+
+        else:
+            self._debug = debug
+
+        if self._debug >= DEBUG.INFO:
+            print("initializing context")
 
         self.tempdir = None
  
@@ -49,16 +64,22 @@ class Errand(object):
         self.workshops = {} # contains workshops
         self.result = [] # contains results from workshops
 
-        self.order = order if isinstance(order, Order) else Order(order, self._env)
+        self.order = order if isinstance(order, Order) else Order(order, self._env, debug=self._debug)
 
         self.timeout = timeout
      
     def __enter__(self):
 
+        if self._debug >= DEBUG.INFO:
+            print("entering context")
+
         self.tempdir = tempfile.mkdtemp()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+
+        if self._debug >= DEBUG.INFO:
+            print("exiting context")
 
         for ws in self.workshops:
             self.result.append(ws.close(timeout=self.timeout))
@@ -72,10 +93,10 @@ class Errand(object):
         # to determin how many gofers to be called, or the group hierachy 
 
         if len(vargs) > 0:
-            return Gofers(*vargs)
+            return Gofers(*vargs, debug=self._debug)
 
         else:
-            return Gofers(1)
+            return Gofers(1, debug=self._debug)
 
     def _pack_argument(self, arg, caller_args):
 
@@ -130,7 +151,7 @@ class Errand(object):
 
         inargs, outargs = self._split_arguments(vargs, caller_args)
 
-        ws = Workshop(inargs, outargs, self.order, self.tempdir, **kwargs)
+        ws = Workshop(inargs, outargs, self.order, self.tempdir, debug=self._debug, **kwargs)
         self.workshops[ws] = {}
 
         return ws

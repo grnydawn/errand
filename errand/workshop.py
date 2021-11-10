@@ -15,13 +15,14 @@ class Workshop(object):
 
 """
 
-    def __init__(self, inargs, outargs, order, workdir, backend=None, compile=None):
+    def __init__(self, inargs, outargs, order, workdir, debug=0, backend=0, compile=None):
 
+        self._debug = 0
         self.inargs = inargs
         self.outargs = outargs
         self.order = order
         self.compile = split_compile(compile)
-        self.backends = select_backends(backend, self.compile, self.order, workdir)
+        self.backends = select_backends(backend, self.compile, self.order, workdir, debug=debug)
         self.curbackend = None
         self.workdir = workdir
         self.code = None

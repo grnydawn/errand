@@ -10,6 +10,9 @@ errand_builtins = dict((k, v) for k, v in __builtins__.items()
                        if k not in exclude_list)
 del exclude_list
 
+class DEBUG(object):
+    NO_DEBUG, CRITICAL, MAJOR, WARNING, INFO = range(5)
+
 def _p(*argv, **kw_str):
     return list(argv), kw_str
 

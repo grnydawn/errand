@@ -7,8 +7,9 @@ class Gofers(object):
     """Errand gofers class
 
 """
-    def __init__(self, *sizes):
+    def __init__(self, *sizes, debug=0):
 
+        self._debug = debug
         self._norm_sizes(*sizes)
 
     def _norm_sizes(self, *sizes):

@@ -30,3 +30,12 @@
 	DO id=1, x_%shape(1)
 		z(id) = x(id) + y(id)
 	END DO
+
+[pthread-fortran]
+	
+	!integer :: id = ERRAND_GOFER_ID
+	integer :: id
+
+    id = ERRAND_GOFER_ID
+	z(id) = x(id) + y(id)
+
