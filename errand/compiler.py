@@ -470,18 +470,13 @@ class Compilers(object):
             clist =  [OpenAcc_Gnu_Cpp_Compiler, OpenAcc_CrayClang_Cpp_Compiler,
                       OpenAcc_Pgi_Cpp_Compiler]
 
-        elif backend == "pthread":
+        elif backend in ("pthread-c++", "c++"):
             clist =  [Pthread_Gnu_Cpp_Compiler, Pthread_CrayClang_Cpp_Compiler,
                       Pthread_AmdClang_Cpp_Compiler, Pthread_Pgi_Cpp_Compiler,
                       Pthread_AppleClang_Cpp_Compiler]
 
         elif backend == "pthread-fortran":
             clist =  [Pthread_AppleGnu_Fortran_Compiler, Pthread_Gnu_Fortran_Compiler]
-
-        elif backend == "c++":
-            clist =  [Gnu_Cpp_Compiler, CrayClang_Cpp_Compiler,
-                      AmdClang_Cpp_Compiler, Pgi_Cpp_Compiler,
-                      AppleClang_Cpp_Compiler]
 
         elif backend == "fortran":
             clist =  [AmdFlang_Fortran_Compiler, Cray_Fortran_Compiler,

@@ -124,6 +124,8 @@ INTEGER (C_INT) FUNCTION unravel_index(self, tid, dim)
 END FUNCTION
 
 """
+
+
 class Backend(abc.ABC):
 
     def __init__(self, workdir, compilers, targetsystem, debug=0):
@@ -352,10 +354,10 @@ extern "C" int stop() {{
         varclass = self.code_varclass()
         struct = self.code_struct()
         vardef = self.code_vardef()
-        varglobal = self.code_varglobal()
         h2dcopyfunc = self.code_h2dcopyfunc()
         d2hcopyfunc = self.code_d2hcopyfunc()
         devfunc = self.code_devfunc()
+        varglobal = self.code_varglobal()
         function = self.code_function()
         prerun = self.code_prerun()
         calldevmain = self.code_calldevmain()
@@ -477,7 +479,6 @@ class FortranBackendBase(Backend):
     codeext = "f90"
     objext = "o"
 
-
     fortran_module_template = """
 
 MODULE global
@@ -501,6 +502,7 @@ CONTAINS
 {modproc}
 END MODULE
 """
+
 
     fortran_code_template = """
 {top}
@@ -554,9 +556,6 @@ END FUNCTION
     def code_top(self):
         return ""
 
-    def code_header(self):
-        return ""
-
     def code_attrtype(self):
         return ""
 
@@ -581,9 +580,11 @@ END FUNCTION
     def code_attrdef(self):
         return ""
 
+    @abc.abstractmethod
     def code_h2dcopyfunc(self):
         return ""
 
+    @abc.abstractmethod
     def code_d2hcopyfunc(self):
         return ""
 
@@ -797,15 +798,13 @@ def select_backends(backend, compile, order, workdir, debug=0):
 
     if len(_installed_backends) == 0:
         from errand.cuda_hip import CudaBackend, HipBackend
-        from errand.pthread import PThreadBackend
         from errand.openacc_cpp import OpenAccCppBackend
-        from errand.cpp import CppBackend
-        from errand.fortran import FortranBackend
-        from errand.pthread_fortran import PThreadFortranBackend
+        from errand.cpp import PThreadCppBackend, CppBackend
+        from errand.fortran import PThreadFortranBackend, FortranBackend
 
         _installed_backends[CudaBackend.name] = CudaBackend
         _installed_backends[HipBackend.name] = HipBackend
-        _installed_backends[PThreadBackend.name] = PThreadBackend
+        _installed_backends[PThreadCppBackend.name] = PThreadCppBackend
         _installed_backends[OpenAccCppBackend.name] = OpenAccCppBackend
         _installed_backends[CppBackend.name] = CppBackend
         _installed_backends[FortranBackend.name] = FortranBackend

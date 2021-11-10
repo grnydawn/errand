@@ -20,7 +20,7 @@ control = True
 	if (row < a.shape(0) && col < a.shape(1) )
 		c(row, col) = a(row, col) + b(row, col);
 
-[pthread]
+[pthread-c++]
 
     int row = a.unravel_index(ERRAND_GOFER_ID, 0);
     int col = a.unravel_index(ERRAND_GOFER_ID, 1);
@@ -51,8 +51,8 @@ control = True
 
     INTEGER row, col
 
-    DO row=1, a_%shape(1)
-        DO col=1, a_%shape(2)
+    DO row=1, a_attr%shape(1)
+        DO col=1, a_attr%shape(2)
 			c(row, col) = a(row, col) + b(row, col);
 			!c(col, row) = a(col, row) + b(col, row);
         END DO

@@ -5,7 +5,7 @@
 	int id = blockDim.x * blockIdx.x + threadIdx.x;
 	if(id < x.size()) z(id) = x(id) + y(id);
 
-[pthread]
+[pthread-c++]
 	
 	int id = ERRAND_GOFER_ID;
 	z(id) = x(id) + y(id);
@@ -27,7 +27,7 @@
 
     INTEGER id
 
-	DO id=1, x_%shape(1)
+	DO id=1, x_attr%shape(1)
 		z(id) = x(id) + y(id)
 	END DO
 

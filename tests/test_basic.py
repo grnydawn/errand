@@ -5,17 +5,17 @@ import pytest
 from errand import Errand
 
 here = os.path.dirname(os.path.abspath(__file__))
-#test_backends = ["cuda", "hip", "pthread", "openacc-c++", "c++", "fortran"]
-#test_backends = ["cuda", "hip", "pthread"]
-#test_backends = ["hip", "pthread", "openacc-c++", "c++"]
+#test_backends = ["cuda", "hip", "pthread-c++", "openacc-c++", "c++", "fortran"]
+#test_backends = ["cuda", "hip", "pthread-c++"]
+#test_backends = ["hip", "pthread-c++", "openacc-c++", "c++"]
 #test_backends = ["hip"]
 #test_backends = ["c++"]
 #test_backends = ["fortran"]
 #test_backends = ["cuda"]
-#test_backends = ["cuda", "pthread"]
-#test_backends = ["cuda", "pthread", "openacc-c++"]
-#test_backends = ["pthread"]
-test_backends = ["pthread-fortran"]
+#test_backends = ["cuda", "pthread-c++"]
+#test_backends = ["cuda", "pthread-c++", "openacc-c++"]
+test_backends = ["c++", "pthread-c++"]
+#test_backends = ["fortran", "pthread-fortran"]
 #test_backends = ["openacc-c++"]
 
 @pytest.mark.parametrize("backend", test_backends)
@@ -36,7 +36,7 @@ def test_vecadd1d(backend):
     # include attrs of workshop like backend, ncores, nthreads/core, memory, ...
     # hip or cuda backend
     #with Errand(order, backend="hip") as erd:
-    with Errand(order, timeout=5, debug=5) as erd:
+    with Errand(order, timeout=5, debug=0) as erd:
 
         # hierachical settings: order -> context -> base
         # best-effort of guessing default settings

@@ -1,4 +1,4 @@
-"""Errand Fortran backend module
+"""Errand Fortran and PThread Fortran backend module
 
 
 """
@@ -10,10 +10,37 @@ from errand.backend import (FortranBackendBase, fortran_attrtype_template,
                             fortran_attrproc_template)
 from errand.compiler import Compilers
 from errand.system import select_system
+from errand.fortscan import get_firstexec
 from errand.util import which
 
 
-struct_template = """
+typedef_template = """
+    integer, parameter :: PTHREAD_SIZE       = 2    ! 8 Bytes.
+
+    type, bind(c), public :: c_pthread_t
+        private
+        integer(kind=c_int) :: hidden(PTHREAD_SIZE)
+    end type c_pthread_t
+
+    interface
+        ! int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg)
+        function c_pthread_create(thread, attr, start_routine, arg) bind(c, name='pthread_create')
+            import :: c_int, c_ptr, c_funptr, c_pthread_t
+            type(c_pthread_t), intent(inout)     :: thread
+            type(c_ptr),       intent(in), value :: attr
+            type(c_funptr),    intent(in), value :: start_routine
+            type(c_ptr),       intent(in), value :: arg
+            integer(kind=c_int)                  :: c_pthread_create
+        end function c_pthread_create
+
+        ! int pthread_join(pthread_t thread, void **value_ptr)
+        function c_pthread_join(thread, value_ptr) bind(c, name='pthread_join')
+            import :: c_int, c_ptr, c_pthread_t
+            type(c_pthread_t), intent(in), value :: thread
+            type(c_ptr),       intent(in)        :: value_ptr
+            integer(kind=c_int)                  :: c_pthread_join
+        end function c_pthread_join
+    end interface
 """
 
 
@@ -81,32 +108,67 @@ END FUNCTION
 
 """
 
-devfunc_template = """
-"""
+contains_template = """
+CONTAINS
 
-function_template = """
+RECURSIVE SUBROUTINE kernel_ (errand_tid) BIND(C)
+    USE, INTRINSIC :: ISO_C_BINDING 
+    USE global, ONLY : errand_thread_state
+    {argimport}
+    IMPLICIT NONE
+    TYPE(c_ptr), INTENT(IN), value :: errand_tid
+    INTEGER, POINTER :: ERRAND_GOFER_ID_PTR
+    INTEGER :: ERRAND_GOFER_ID
+
+    {body}
+
+    errand_thread_state(ERRAND_GOFER_ID) = 2
+
+END SUBROUTINE
 """
 
 calldevmain_template = """
-{body}
+    USE global, ONLY : errand_threads, errand_thread_state, c_pthread_create
+    IMPLICIT NONE
+    INTEGER i, rc
+    INTEGER, TARGET :: tids({nthreads}) = [ (i, i = 1, {nthreads}) ]
+
+    ALLOCATE(errand_threads({nthreads}))
+    ALLOCATE(errand_thread_state({nthreads}))
+
+    DO i=1, {nthreads}
+
+        errand_thread_state(i) = 0
+
+        rc = c_pthread_create(thread=errand_threads(i), attr=c_null_ptr, &
+                start_routine=c_funloc(kernel_), arg=c_loc(tids(i)))
+
+        IF (rc .NE. 0) THEN
+            errand_thread_state(i) = -1
+        END IF
+
+    END DO
+
+    DO i=1, {nthreads}
+        DO WHILE (errand_thread_state(i) .EQ. 0)
+            CONTINUE
+        END DO
+    END DO
 """
 
-class FortranBackend(FortranBackendBase):
+class PThreadFortranBackend(FortranBackendBase):
 
-    name = "fortran"
+    name = "pthread-fortran"
     codeext = "f90"
     libext = "so"
 
-    def __init__(self, workdir, compile):
+    def __init__(self, workdir, compile, **kwargs):
 
         compilers = Compilers(self.name, compile)
         targetsystem = select_system("cpu")
 
-        super(FortranBackend, self).__init__(workdir, compilers,
-            targetsystem)
-
-    #def compiler_option(self):
-    #    return self.option + "--compiler-options '-fPIC' --shared"
+        super(PThreadFortranBackend, self).__init__(workdir, compilers,
+            targetsystem, **kwargs)
 
     def getname_h2dcopy(self, arg):
 
@@ -133,6 +195,10 @@ class FortranBackend(FortranBackendBase):
 
         return 3 + len(arg["data"].shape)*2
 
+    def num_threads(self):
+
+        return numpy.prod(self.nteams) * numpy.prod(self.nmembers)
+
     def get_numpyattrs(self, arg):
         data = arg["data"]
 
@@ -154,11 +220,11 @@ class FortranBackend(FortranBackendBase):
         for arg in self.inargs+self.outargs:
 
             data.append(arg["curname"])
-            data.append(arg["curname"]+"_")
+            data.append(arg["curname"]+"_attr")
 
         return ",".join(data)
 
-    def code_struct(self):
+    def code_typedef(self):
 
         out = []
 
@@ -170,7 +236,7 @@ class FortranBackend(FortranBackendBase):
 
         #out.append("int tid;")
 
-        return struct_template.format(args="\n".join(out))
+        return typedef_template.format(args="\n".join(out))
 
     def code_attrdef(self):
 
@@ -178,21 +244,9 @@ class FortranBackend(FortranBackendBase):
 
         for arg in self.inargs+self.outargs:
 
-            out += "CLASS(attrtype), ALLOCATABLE :: %s\n" % (arg["curname"]+"_")
+            out += "CLASS(attrtype), ALLOCATABLE :: %s\n" % (arg["curname"]+"_attr")
 
         return out
-
-#        out = []
-#
-#        for arg in self.inargs+self.outargs:
-#
-#            ndim, dname = self.getname_argpair(arg)
-#
-#            varname = self.getname_var(arg, "host")
-#
-#            out.append(".{name} = &{name}".format(name=varname))
-#
-#        return attrdef_template.format(varassign=",\n".join(out))
 
     def code_vardef(self):
 
@@ -206,30 +260,40 @@ class FortranBackend(FortranBackendBase):
 
         return out
 
-    def code_function(self):
+    def code_modvardef(self):
 
-        nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
-        return function_template.format(nthreads=str(nthreads))
+        out = """
+        TYPE(c_pthread_t), DIMENSION(:), ALLOCATABLE :: errand_threads
+        INTEGER, DIMENSION(:), ALLOCATABLE :: errand_thread_state
+"""
 
-    def code_devfunc(self):
+        return out
+
+    def code_contains(self):
 
         argdef = []
         argassign = []
 
-        body = str(self.order.get_section(self.name))
+        goferid = ["IF (.NOT. C_ASSOCIATED(errand_tid)) RETURN",
+                   "CALL c_f_pointer(errand_tid, ERRAND_GOFER_ID_PTR)",
+                   "ERRAND_GOFER_ID = ERRAND_GOFER_ID_PTR",
+                   "errand_thread_state(ERRAND_GOFER_ID) = 1"]
 
+        section = str(self.order.get_section(self.name))
+        bodylines = section.split("\n")
+        firstexec = get_firstexec(bodylines)
+        body = bodylines[:firstexec] + goferid + bodylines[firstexec:]
+
+        arglist = []
         for arg in self.inargs+self.outargs:
+            arglist.append(arg["curname"])
+            arglist.append(arg["curname"]+"_attr")
 
-            ndim, dname = self.getname_argpair(arg)
+        argimport = ""
+        if arglist:
+            argimport = "USE global, ONLY : " + ", ".join(arglist)
 
-            #argdef.append("host_%s_dim%s %s = host_%s_dim%s();" % (dname, ndim, arg["curname"], dname, ndim))
-            argdef.append("host_%s_dim%s %s;" % (dname, ndim, arg["curname"]))
-            argassign.append("%s = *(args->data->host_%s);" % (arg["curname"], arg["curname"]))
-
-        argassign.append("int ERRAND_GOFER_ID = 0;")
-
-        return devfunc_template.format(argdef="\n".join(argdef), body=body,
-                    argassign="\n".join(argassign))
+        return contains_template.format(argimport=argimport, body="\n".join(body))
 
     def code_h2dcopyfunc(self):
 
@@ -249,7 +313,7 @@ class FortranBackend(FortranBackendBase):
             attrsize = self.len_numpyattrs(arg)
 
             out += template.format(name=fname, dtype=dname,
-                    varname=arg["curname"], attrname=arg["curname"]+"_",
+                    varname=arg["curname"], attrname=arg["curname"]+"_attr",
                     bound=",".join(bound), attrsize=str(attrsize))
 
         for arg in self.outargs:
@@ -266,7 +330,7 @@ class FortranBackend(FortranBackendBase):
             attrsize = self.len_numpyattrs(arg)
 
             out += template.format(name=fname, dtype=dname,
-                    varname=arg["curname"], attrname=arg["curname"]+"_",
+                    varname=arg["curname"], attrname=arg["curname"]+"_attr",
                     bound=",".join(bound), attrsize=str(attrsize))
 
         return out
@@ -287,29 +351,55 @@ class FortranBackend(FortranBackendBase):
                 bound.append("%d" % s)
 
             out += template.format(name=fname, dtype=dname,
-                    varname=arg["curname"], attrname=arg["curname"]+"_",
+                    varname=arg["curname"], attrname=arg["curname"]+"_attr",
                     bound=",".join(bound))
 
         return out
 
  
     def code_calldevmain(self):
-#
-#        argassign = []
-#
-#        for arg in self.inargs+self.outargs:
-#
-#            args.append(self.getname_var(arg, "host"))
-#
-        # testing
-        #args.append("1")
 
-        #nthreads = numpy.prod(self.nteams) * numpy.prod(self.nmembers)
-        #return calldevmain_template.format(nthreads=str(nthreads))
+        #body = str(self.order.get_section(self.name))
 
-        body = str(self.order.get_section(self.name))
+        return calldevmain_template.format(nthreads=self.num_threads())
 
-        return calldevmain_template.format(body=body)
+
+    def code_stopbody(self):
+
+        out = """
+        USE global, ONLY : errand_threads, c_pthread_join, errand_threads, errand_thread_state
+        IMPLICIT NONE
+        INTEGER i, rc
+        INTEGER, TARGET :: dummy
+
+        DO i=1, {nthreads}
+            rc = c_pthread_join(errand_threads(i), c_loc(dummy))
+        END DO
+
+        DEALLOCATE(errand_threads)
+        DEALLOCATE(errand_thread_state)
+""".format(nthreads=self.num_threads())
+
+        return out
+
+    def code_isbusybody(self):
+
+        out = """
+        USE global, ONLY : errand_thread_state
+        IMPLICIT NONE
+        INTEGER i
+
+        DO i=1, {nthreads}
+            IF (errand_thread_state(i) .GE. 0 .AND. errand_thread_state(i) .LT. 2) THEN
+                isbusy = 1
+                RETURN
+            END IF
+        END DO
+
+        isbusy = 0
+""".format(nthreads=self.num_threads())
+
+        return out
 
     def get_template(self, name):
 
@@ -321,3 +411,11 @@ class FortranBackend(FortranBackendBase):
 
         elif name == "d2hcopy":
             return pthrd_d2hcopy_template
+
+
+class FortranBackend(PThreadFortranBackend):
+
+    name = "fortran"
+
+    def num_threads(self):
+        return 1

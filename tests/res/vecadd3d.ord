@@ -18,7 +18,7 @@ control = True
 	if (X < a.shape(0) && Y < a.shape(1) && Z < a.shape(2))
 		c(X, Y, Z) = a(X, Y, Z) + b(X, Y, Z);
 
-[pthread]
+[pthread-c++]
 
     int X = a.unravel_index(ERRAND_GOFER_ID, 0);
     int Y = a.unravel_index(ERRAND_GOFER_ID, 1);
@@ -54,9 +54,9 @@ control = True
 
     INTEGER X, Y, Z
 
-    DO X=1, a_%shape(1)
-        DO Y=1, a_%shape(2)
-            DO Z=1, a_%shape(3)
+    DO X=1, a_attr%shape(1)
+        DO Y=1, a_attr%shape(2)
+            DO Z=1, a_attr%shape(3)
 				c(X, Y, Z) = a(X, Y, Z) + b(X, Y, Z);
             END DO
         END DO
