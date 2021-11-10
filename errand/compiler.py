@@ -325,7 +325,7 @@ class AmdFlang_Fortran_Compiler(Fortran_Compiler):
 
         opt = " "
 
-        return "-shared " + opt + super(AmdFlang_Fortran_Compiler,
+        return "-shared -fPIC " + opt + super(AmdFlang_Fortran_Compiler,
             self).get_option(**kwargs)
 
     def check_version(self, version):
@@ -452,6 +452,18 @@ class Pthread_AppleGnu_Fortran_Compiler(AppleGnu_Fortran_Compiler):
         return "-pthread " + super(Pthread_AppleGnu_Fortran_Compiler, self).get_option(**kwargs)
 
 
+class Pthread_Cray_Fortran_Compiler(Cray_Fortran_Compiler):
+
+    def get_option(self, **kwargs):
+        return "-pthread " + super(Pthread_AppleGnu_Fortran_Compiler, self).get_option(**kwargs)
+
+
+class Pthread_AmdFlang_Fortran_Compiler(AmdFlang_Fortran_Compiler):
+
+    def get_option(self, **kwargs):
+        return "-pthread " + super(Pthread_AmdFlang_Fortran_Compiler, self).get_option(**kwargs)
+
+
 class Compilers(object):
 
     def __init__(self, backend, compile):
@@ -475,13 +487,16 @@ class Compilers(object):
                       Pthread_AmdClang_Cpp_Compiler, Pthread_Pgi_Cpp_Compiler,
                       Pthread_AppleClang_Cpp_Compiler]
 
-        elif backend == "pthread-fortran":
-            clist =  [Pthread_AppleGnu_Fortran_Compiler, Pthread_Gnu_Fortran_Compiler]
-
-        elif backend == "fortran":
-            clist =  [AmdFlang_Fortran_Compiler, Cray_Fortran_Compiler,
-                        Pgi_Fortran_Compiler, IbmXl_Fortran_Compiler,
-                        AppleGnu_Fortran_Compiler, Gnu_Fortran_Compiler]
+        elif backend in ("pthread-fortran", "fortran"):
+            clist =  [Pthread_Cray_Fortran_Compiler,
+                        Pthread_AmdFlang_Fortran_Compiler,
+                        Pthread_AppleGnu_Fortran_Compiler,
+                        Pthread_Gnu_Fortran_Compiler]
+#
+#        elif backend == "fortran":
+#            clist =  [AmdFlang_Fortran_Compiler, Cray_Fortran_Compiler,
+#                        Pgi_Fortran_Compiler, IbmXl_Fortran_Compiler,
+#                        AppleGnu_Fortran_Compiler, Gnu_Fortran_Compiler]
 
         else:
             raise Exception("Compiler for '%s' is not supported." % backend)
