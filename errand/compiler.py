@@ -464,6 +464,15 @@ class Pthread_AmdFlang_Fortran_Compiler(AmdFlang_Fortran_Compiler):
         return "-pthread " + super(Pthread_AmdFlang_Fortran_Compiler, self).get_option(**kwargs)
 
 
+class Pthread_IbmXl_Fortran_Compiler(IbmXl_Fortran_Compiler):
+    pass
+
+
+class Pthread_Pgi_Fortran_Compiler(Pgi_Fortran_Compiler):
+    pass
+
+
+
 class Compilers(object):
 
     def __init__(self, backend, compile):
@@ -479,16 +488,21 @@ class Compilers(object):
             clist =  [Hip_Cpp_Compiler]
 
         elif backend == "openacc-c++":
-            clist =  [OpenAcc_Gnu_Cpp_Compiler, OpenAcc_CrayClang_Cpp_Compiler,
-                      OpenAcc_Pgi_Cpp_Compiler]
+            clist =  [OpenAcc_Gnu_Cpp_Compiler,
+                        OpenAcc_CrayClang_Cpp_Compiler,
+                        OpenAcc_Pgi_Cpp_Compiler]
 
         elif backend in ("pthread-c++", "c++"):
-            clist =  [Pthread_Gnu_Cpp_Compiler, Pthread_CrayClang_Cpp_Compiler,
-                      Pthread_AmdClang_Cpp_Compiler, Pthread_Pgi_Cpp_Compiler,
-                      Pthread_AppleClang_Cpp_Compiler]
+            clist =  [Pthread_Gnu_Cpp_Compiler,
+                        Pthread_CrayClang_Cpp_Compiler,
+                        Pthread_AmdClang_Cpp_Compiler,
+                        Pthread_Pgi_Cpp_Compiler,
+                        Pthread_AppleClang_Cpp_Compiler]
 
         elif backend in ("pthread-fortran", "fortran"):
             clist =  [Pthread_Cray_Fortran_Compiler,
+                        Pthread_IbmXl_Fortran_Compiler,
+                        Pthread_Pgi_Fortran_Compiler,
                         Pthread_AmdFlang_Fortran_Compiler,
                         Pthread_AppleGnu_Fortran_Compiler,
                         Pthread_Gnu_Fortran_Compiler]
