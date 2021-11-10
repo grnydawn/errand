@@ -61,3 +61,17 @@ control = True
             END DO
         END DO
     END DO
+
+[pthread-fortran]
+
+    INTEGER X, Y, Z
+
+    X = a_attr%unravel_index(ERRAND_GOFER_ID, 1)
+    Y = a_attr%unravel_index(ERRAND_GOFER_ID, 2)
+    Z = a_attr%unravel_index(ERRAND_GOFER_ID, 3)
+
+	IF (X .LE. a_attr%shape(1) .AND. Y .LE. a_attr%shape(2) &
+        .AND. Z .LE. a_attr%shape(3)) THEN
+		c(X, Y, Z) = a(X, Y, Z) + b(X, Y, Z);
+    END IF
+

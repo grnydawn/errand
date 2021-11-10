@@ -112,15 +112,15 @@ INTEGER (C_INT) FUNCTION unravel_index(self, tid, dim)
     INTEGER :: i
     INTEGER (C_INT) :: q, r, s
 
-    r = tid
+    r = tid-1
 
-    DO i=1,dim
-        s = self%stride(i)
+    DO i=0,dim-1
+        s = self%stride(i+1)
         q = r / s
         r = MOD(r, s)
     END DO
 
-    unravel_index = q
+    unravel_index = q+1
 END FUNCTION
 
 """

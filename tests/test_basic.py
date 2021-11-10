@@ -65,7 +65,7 @@ def test_vecadd1d(backend):
     #assert reduced_c == a.sum() + b.sum()
 
 @pytest.mark.parametrize("backend", test_backends)
-def ttest_vecadd2d(backend):
+def test_vecadd2d(backend):
 
     #NROW, NCOL = 2000, 300
     #NROW, NCOL = 20, 3
@@ -91,7 +91,7 @@ def ttest_vecadd2d(backend):
 
 
 @pytest.mark.parametrize("backend", test_backends)
-def ttest_vecadd3d(backend):
+def test_vecadd3d(backend):
 
     #NROW, NCOL = 2000, 300
     X, Y, Z = 10, 3, 2
@@ -115,7 +115,7 @@ def ttest_vecadd3d(backend):
     assert np.array_equal(c, a+b)
 
 @pytest.mark.parametrize("backend", test_backends)
-def ttest_listadd2d(backend):
+def test_listadd2d(backend):
 
     NROW = 2
     NCOL = 3

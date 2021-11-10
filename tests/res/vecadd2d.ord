@@ -57,3 +57,12 @@ control = True
 			!c(col, row) = a(col, row) + b(col, row);
         END DO
     END DO
+
+[pthread-fortran]
+
+    INTEGER row, col
+
+    row = a_attr%unravel_index(ERRAND_GOFER_ID, 1)
+    col = a_attr%unravel_index(ERRAND_GOFER_ID, 2)
+
+	c(row, col) = a(row, col) + b(row, col)
