@@ -245,14 +245,14 @@ class OpenAcc_CrayClang_Cpp_Compiler(Pthread_CrayClang_Cpp_Compiler):
                 super(OpenAcc_CrayClang_Cpp_Compiler, self).get_option(**kwargs))
 
 
-class OpenAcc_Pgi_Cpp_Compiler(Pthread_Pgi_Cpp_Compiler):
+class OpenAcc_Pgi_Cpp_Compiler(Pgi_Cpp_Compiler):
 
     def __init__(self, path, flags):
 
         super(OpenAcc_Pgi_Cpp_Compiler, self).__init__(path, flags)
 
     def get_option(self, **kwargs):
-        return ("-acc " +
+        return ("-acc  -ta=tesla:pinned " +
                 super(OpenAcc_Pgi_Cpp_Compiler, self).get_option(**kwargs))
 
 

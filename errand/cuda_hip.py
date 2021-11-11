@@ -289,10 +289,10 @@ class CudaHipBackend(CppBackendBase):
         return calldevmain_template.format(teams=teams, members=members,
                     args=", ".join(args))
 
-    def code_postrun(self):
-        # NOTE: mark finished here; d2h copy will block until gpu run finish.
-        return "    errand_isfinished = 1;";
+    def code_isbusybody(self):
 
+        # synchronous d2hcopy will do implicit block 
+        return "return 0;"
 
 class CudaBackend(CudaHipBackend):
 
@@ -328,6 +328,17 @@ class CudaBackend(CudaHipBackend):
         elif name == "d2hcopy":
             return cuda_d2hcopy_template
 
+    def code_stopbody(self):
+
+        out = ""
+
+        for arg in self.inargs+self.outargs:
+
+            out += "cudaFree(%s.data);\n" % self.getname_var(arg, "dev")
+            out += "cudaFree(%s._attrs);\n" % self.getname_var(arg, "dev")
+            out += "free(%s._attrs);\n" % self.getname_var(arg, "host")
+
+        return out
 
 class HipBackend(CudaHipBackend):
 
@@ -360,3 +371,16 @@ class HipBackend(CudaHipBackend):
 
         elif name == "d2hcopy":
             return hip_d2hcopy_template
+
+    def code_stopbody(self):
+
+        out = ""
+
+        for arg in self.inargs+self.outargs:
+
+            out += "hipFree(%s.data);\n" % self.getname_var(arg, "dev")
+            out += "hipFree(%s._attrs);\n" % self.getname_var(arg, "dev")
+            out += "free(%s._attrs);\n" % self.getname_var(arg, "host")
+
+        return out
+

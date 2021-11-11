@@ -15,8 +15,8 @@ here = os.path.dirname(os.path.abspath(__file__))
 #test_backends = ["cuda", "pthread-c++"]
 #test_backends = ["cuda", "pthread-c++", "openacc-c++"]
 #test_backends = ["c++", "pthread-c++"]
-test_backends = ["fortran", "pthread-fortran"]
-#test_backends = ["openacc-c++"]
+#test_backends = ["fortran", "pthread-fortran"]
+test_backends = ["openacc-c++"]
 
 @pytest.mark.parametrize("backend", test_backends)
 def test_vecadd1d(backend):
@@ -25,7 +25,7 @@ def test_vecadd1d(backend):
 
     a = np.arange(N)
     b = np.arange(N) * 2
-    c = np.zeros(N)
+    c = np.zeros(N, dtype=np.int64)
 
     order = os.path.join(here, "res", "vecadd1d.ord")
 
@@ -36,7 +36,7 @@ def test_vecadd1d(backend):
     # include attrs of workshop like backend, ncores, nthreads/core, memory, ...
     # hip or cuda backend
     #with Errand(order, backend="hip") as erd:
-    with Errand(order, timeout=5, debug=0) as erd:
+    with Errand(order, timeout=5, debug=5) as erd:
 
         # hierachical settings: order -> context -> base
         # best-effort of guessing default settings
@@ -65,7 +65,7 @@ def test_vecadd1d(backend):
     #assert reduced_c == a.sum() + b.sum()
 
 @pytest.mark.parametrize("backend", test_backends)
-def ttest_vecadd2d(backend):
+def test_vecadd2d(backend):
 
     #NROW, NCOL = 2000, 300
     #NROW, NCOL = 20, 3
@@ -91,7 +91,7 @@ def ttest_vecadd2d(backend):
 
 
 @pytest.mark.parametrize("backend", test_backends)
-def ttest_vecadd3d(backend):
+def test_vecadd3d(backend):
 
     #NROW, NCOL = 2000, 300
     X, Y, Z = 10, 3, 2
@@ -115,7 +115,7 @@ def ttest_vecadd3d(backend):
     assert np.array_equal(c, a+b)
 
 @pytest.mark.parametrize("backend", test_backends)
-def ttest_listadd2d(backend):
+def test_listadd2d(backend):
 
     NROW = 2
     NCOL = 3

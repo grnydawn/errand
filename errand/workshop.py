@@ -70,6 +70,10 @@ class Workshop(object):
 
             time.sleep(0.1)
 
+        if self._debug > 3:
+            if timeout and float(timeout) < time.time()-self.start:
+                print("Timeout occured.")
+
         res = self.curbackend.d2hcopy(self.outargs)
 
         self.curbackend.stop()

@@ -50,6 +50,8 @@ void * _kernel(void * ptr){{
 
     int ERRAND_GOFER_ID = *((int *)ptr);
 
+    printf("XXX %d\\n", x(3));
+
     errand_thread_state[ERRAND_GOFER_ID] = 1;
 
     {body}
@@ -77,9 +79,12 @@ calldevmain_template = """
     for (int i=0; i < {nthreads}; i++) {{
 
         while (errand_thread_state[i] == 0) {{
-            do {{ }} while(0);
+            usleep(1000);
+            //do {{ }} while(0);
+            //printf("%d", i);
         }}
     }}
+
 """
 
 stopbody_template = """
